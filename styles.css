@@ -1,0 +1,36 @@
+:root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #171b24; background: #F5F6F8; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+[hidden] { display: none !important; }
+.site-header { background: #0B0B0B; color: white; padding: calc(18px + env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 18px max(22px, env(safe-area-inset-left)); }
+.header-inner { max-width: 680px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.brand { font-size: 27px; font-weight: 750; letter-spacing: -.8px; }
+.logo-space { width: 52px; height: 44px; display: grid; place-items: center; border: 1px solid #555; border-radius: 10px; font-size: 16px; font-weight: 700; }
+main { width: 100%; max-width: 724px; margin: 0 auto; padding: 20px max(22px, env(safe-area-inset-right)) 32px max(22px, env(safe-area-inset-left)); flex: 1; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; min-height: 44px; gap: 12px; color: #626a78; font-size: 11px; letter-spacing: 1.4px; font-weight: 700; }
+.card { background: white; padding: 26px 22px; border: 1px solid #e5e7ec; border-radius: 18px; margin: 16px 0; box-shadow: 0 4px 20px #17234005; }
+h1 { font-size: clamp(28px, 6vw, 36px); letter-spacing: -1px; line-height: 1.15; margin: 10px 0 16px; }
+h2 { font-size: 20px; margin: 0 0 12px; }
+p { line-height: 1.6; }
+.intro { color: #626a78; margin-bottom: 26px; }
+.eyebrow { color: #1E5ACB; font-size: 11px; font-weight: 750; letter-spacing: 1.5px; margin: 8px 0 14px; }
+label { display: block; font-weight: 650; font-size: 14px; margin: 20px 0 8px; }
+input { width: 100%; min-height: 52px; border: 1px solid #b9c0cb; background: #fff; border-radius: 9px; padding: 12px; font: inherit; font-size: 16px; }
+button, .button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; font: inherit; cursor: pointer; }
+.button { width: 100%; min-height: 54px; display: inline-flex; align-items: center; justify-content: center; padding: 15px 20px; background: #1E5ACB; color: white; border: 0; border-radius: 10px; font-weight: 650; text-decoration: none; text-align: center; }
+.button:active { background: #15459F; }
+.button:disabled { opacity: .6; cursor: wait; }
+.text-button { color: #1E5ACB; background: transparent; border: 0; min-height: 44px; padding: 10px 0; font-weight: 650; }
+.back { margin: 8px 0 16px; }
+form + .back { width: 100%; margin-bottom: 0; }
+.menu { display: grid; gap: 14px; margin-top: 30px; }
+.menu-button { justify-content: space-between; text-align: left; min-height: 74px; gap: 16px; }
+.hint { color: #626a78; font-size: 14px; }
+#status:empty { display: none; }
+#status { background: #e8eefb; border-radius: 10px; padding: 14px 16px; overflow-wrap: anywhere; }
+.body-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+footer { color: #626a78; text-align: center; font-size: 12px; padding: 22px 20px calc(24px + env(safe-area-inset-bottom)); }
+:focus-visible { outline: 3px solid #a36b00; outline-offset: 4px; }
+.skip-link { position: absolute; left: 12px; top: -80px; padding: 12px; background: white; color: #1E5ACB; z-index: 1; }
+.skip-link:focus { top: 12px; }
+@media (min-width: 600px) { main { padding-top: 32px; } .card { padding: 32px; } #login-view { max-width: 480px; margin: 24px auto; } }
