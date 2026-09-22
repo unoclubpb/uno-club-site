@@ -24,6 +24,7 @@ button, .button { -webkit-tap-highlight-color: transparent; touch-action: manipu
 .back { margin: 8px 0 16px; }
 form + .back { width: 100%; margin-bottom: 0; }
 .menu { display: grid; gap: 14px; margin-top: 30px; }
+.test-banner { margin: 12px 0 24px; color: #d00000; font-size: clamp(64px, 18vw, 96px); font-weight: 900; line-height: 1; text-align: center; }
 .menu-button { justify-content: space-between; text-align: left; min-height: 74px; gap: 16px; }
 .hint { color: #626a78; font-size: 14px; }
 #status:empty { display: none; }
