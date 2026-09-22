@@ -5,7 +5,7 @@ body { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-dir
 .site-header { background: #0B0B0B; color: white; padding: calc(18px + env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 18px max(22px, env(safe-area-inset-left)); }
 .header-inner { max-width: 680px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .brand { font-size: 27px; font-weight: 750; letter-spacing: -.8px; }
-.logo-space { width: 52px; height: 44px; display: grid; place-items: center; border: 1px solid #555; border-radius: 10px; font-size: 16px; font-weight: 700; }
+.header-logo { display: block; width: 120px; max-width: 40%; height: auto; object-fit: contain; flex-shrink: 0; }
 main { width: 100%; max-width: 724px; margin: 0 auto; padding: 20px max(22px, env(safe-area-inset-right)) 32px max(22px, env(safe-area-inset-left)); flex: 1; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; min-height: 44px; gap: 12px; color: #626a78; font-size: 11px; letter-spacing: 1.4px; font-weight: 700; }
 .card { background: white; padding: 26px 22px; border: 1px solid #e5e7ec; border-radius: 18px; margin: 16px 0; box-shadow: 0 4px 20px #17234005; }
@@ -24,7 +24,6 @@ button, .button { -webkit-tap-highlight-color: transparent; touch-action: manipu
 .back { margin: 8px 0 16px; }
 form + .back { width: 100%; margin-bottom: 0; }
 .menu { display: grid; gap: 14px; margin-top: 30px; }
-.test-banner { margin: 12px 0 24px; color: #d00000; font-size: clamp(64px, 18vw, 96px); font-weight: 900; line-height: 1; text-align: center; }
 .menu-button { justify-content: space-between; text-align: left; min-height: 74px; gap: 16px; }
 .hint { color: #626a78; font-size: 14px; }
 #status:empty { display: none; }
