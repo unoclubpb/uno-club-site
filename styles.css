@@ -34,3 +34,9 @@ footer { color: #626a78; text-align: center; font-size: 12px; padding: 22px 20px
 .skip-link { position: absolute; left: 12px; top: -80px; padding: 12px; background: white; color: #1E5ACB; z-index: 1; }
 .skip-link:focus { top: 12px; }
 @media (min-width: 600px) { main { padding-top: 32px; } .card { padding: 32px; } #login-view { max-width: 480px; margin: 24px auto; } }
+
+textarea, select { width: 100%; min-height: 52px; border: 1px solid #b9c0cb; border-radius: 9px; padding: 12px; font: inherit; font-size: 16px; background: white; color: #171b24; }
+textarea { resize: vertical; }
+.admin-form .button { margin-top: 16px; }
+.admin-menu-button { margin: 8px 0; }
+.danger { background: #a32323; }

@@ -21,6 +21,7 @@ function show(view) {
   for (const name of ["login", "menu", "content"]) $(name + "-view").hidden = name !== view;
   $("logout").hidden = !user;
   $("admin-button").hidden = user?.is_admin !== true;
+  $("change-pin-button").hidden = !user;
   $("menu-hint").hidden = !!user;
   $(view + "-title").focus();
 }
@@ -48,11 +49,15 @@ async function api(action, fields = {}, session = token) {
       cache: "no-store", credentials: "omit", redirect: "error", signal: controller.signal,
     });
     if (!response.ok) {
-      const error = new Error(response.status === 401
+      let detail;
+      if ([400, 404, 409].includes(response.status)) {
+        try { const body = await response.json(); if (typeof body.error === "string" && body.error.length <= 300) detail = body.error; } catch {}
+      }
+      const error = new Error(detail || (response.status === 401
         ? (action === "login" ? "Username or PIN was not recognized." : "Your session has expired. Please log in again.")
         : response.status === 403 ? "You do not have access to this information."
         : response.status === 429 ? "Too many attempts. Please wait before trying again."
-        : "The service is unavailable. Please try again later.");
+        : "The service is unavailable. Please try again later."));
       error.status = response.status;
       throw error;
     }
@@ -79,7 +84,10 @@ function card(title, body) {
 }
 function renderContent(page, data) {
   let items;
-  if (page === "schedule") items = data?.game_schedule;
+  if (page === "schedule" && Array.isArray(data?.game_schedule)) items = data.game_schedule
+    .filter(game => game && game.is_active !== false)
+    .sort((a,b) => (a.day_sort ?? 0) - (b.day_sort ?? 0) || (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map(game => ({...game, name: game.game_name ?? game.name, day: game.day_name ?? game.day, time: game.start_time ?? game.time}));
   else if (page === "rules" && Array.isArray(data?.rules)) {
     items = data.rules.slice(0, 1).map((rule) => ({ title: titles.rules, body: rule?.body }));
   } else if (page === "bonus" && Array.isArray(data?.bonus_hands)) {
@@ -136,9 +144,7 @@ async function navigate(page) {
   $("content-title").textContent = titles[page];
   show("content");
   if (page === "admin") {
-    for (const title of ["Users", "Rules", "Games Schedule", "Bonus Hands", "Reservation Numbers", "Change My PIN"]) {
-      $("content").append(card(title, "Coming soon. Editing will be available when admin actions are connected."));
-    }
+    adminMenu();
     return;
   }
   status("Loading…");
@@ -209,4 +215,5 @@ async function initialize() {
   } catch (error) { if (current === revision) clearSession(error.message); }
   finally { $("login-submit").disabled = false; }
 }
+$("change-pin-button").addEventListener("click", () => openAdmin("pin"));
 initialize();

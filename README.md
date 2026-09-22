@@ -1,6 +1,6 @@
 # uno-club-site
 
-Independent Uno Club informational website, **v0.2.0**, using plain HTML, CSS, and JavaScript with no dependencies or build step. GitHub contains only the public site shell. Protected data and authentication live in Supabase behind the `uno-site-api` Edge Function. No other Uno Club repository or app is used.
+Independent Uno Club informational website, **v0.3.0**, using plain HTML, CSS, and JavaScript with no dependencies or build step. GitHub contains only the public site shell. Protected data and authentication live in Supabase behind the `uno-site-api` Edge Function. No other Uno Club repository or app is used.
 
 ## Preview and hosting
 
@@ -10,7 +10,7 @@ Set **`EDGE_FUNCTION_URL` at the top of `app.js`** to your HTTPS project URL end
 
 ## API response contract
 
-The frontend consumes the tested login and bootstrap response shapes. The Edge Function is maintained separately. Requests are JSON `POST` bodies containing `action`. Authenticated calls send `Authorization: Bearer <session_token>`; tokens never go in URLs.
+The frontend consumes the tested login and bootstrap response shapes. The downloaded Edge Function source is maintained in `supabase/functions/uno-site-api/index.ts`. Requests are JSON `POST` bodies containing `action`. Authenticated calls send `Authorization: Bearer <session_token>`; tokens never go in URLs.
 
 | Action | Additional request fields | Successful JSON response |
 | --- | --- | --- |
@@ -24,7 +24,7 @@ Bootstrap fields:
 
 - `user`: `username`, `display_name`, and boolean `is_admin`.
 - `rules`: an array; the page displays the first row's `body` when present.
-- `game_schedule`: an array. The supplied live response is empty, so populated row fields still need live verification. The existing renderer expects `name`, `day`, and optional `time`, `details`, and `reservation_phone`.
+- `game_schedule`: an array. The live fields are `game_name`, `day_name`, `start_time`, `day_sort`, `sort_order`, and `is_active`. The renderer also accepts legacy `name`, `day`, and `time` fields. It shows active games ordered by day and display order.
 - `bonus_hands`: active entries sorted by `sort_order`, displaying `hand_name`, `payout_text`, and `description`. IDs and timestamps are not rendered.
 - `settings`: optional `reservation_phone_1` and `reservation_phone_2`. Empty numbers leave SMS unavailable. When a game has no specific number, the site offers each distinct valid settings number. Numbers must be in international format beginning with `+`.
 
@@ -52,7 +52,17 @@ Use HTTP `401` for invalid credentials or expired/revoked sessions, `403` for de
 
 `index.html` defines the screens, `styles.css` provides mobile-first styling with iPhone safe-area spacing, and `app.js` handles API requests and rendering. The header reserves room for a logo. Update the footer and README together when changing the version.
 
-Admin includes placeholders for Users, Rules, Games Schedule, Bonus Hands, Reservation Numbers, and Change My PIN. No admin mutations are implemented.
+Admin includes separate screens for Users, Rules, Games Schedule, Bonus Hands, Reservation Numbers, and Change My PIN. Users can be added, disabled, reactivated, and have their PIN reset; permanent deletion is not available. Administrators cannot disable themselves or bypass current-PIN verification on their own account. Every management request authenticates the active custom session and checks the current database admin flag. User lists explicitly omit PIN hashes. New PINs are hashed with pgcrypto bcrypt (cost 10). Disabling a user or resetting their PIN revokes their sessions. Changing your own PIN preserves the current session and revokes other sessions; incorrect current-PIN attempts use the existing lockout counters.
+
+Rules save to row 1 and open the refreshed member Rules page. Games and bonus hands support create/edit/delete (with confirmation), numeric ordering, and active flags. Reservation numbers accept international format or blank. Member content is fetched anew on navigation, so edits require no new login. Every authenticated member can reach Change My PIN from the main menu.
+
+The existing case-insensitive unique index `site_users_username_unique` on `lower(username)` protects concurrent user creation. No schema changes are required. Authentication uses the existing 30-day custom sessions and failed-login lockout. Keep `[functions.uno-site-api] verify_jwt = false` in `supabase/config.toml`.
+
+New API actions: `admin_users`, `admin_add_user`, `admin_user_active`, `admin_reset_pin`, `admin_rules`, `admin_save_rules`, `admin_games`, `admin_save_game`, `admin_delete_game`, `admin_bonus`, `admin_save_bonus`, `admin_delete_bonus`, `admin_settings`, `admin_save_settings`, and authenticated `change_pin`. Mutations return `{ "ok": true }`; validation errors return 400, missing records 404, and duplicates 409. Admin reads return their named arrays/objects. PIN fields are only sent in HTTPS request bodies and never persisted by the browser.
+
+Backend checks: `deno check supabase/functions/uno-site-api/index.ts` and `deno test --allow-read tests/admin_api_test.ts`. These offline handler tests cover every management action's 401/403 gates, validation, PIN hashing, session revocation, and safe responses. No real club records are changed by tests.
+
+Deploy only this function with `supabase functions deploy uno-site-api --project-ref xnfudstmpejjmmwpqqgz --use-api`. GitHub Pages serves the static shell from `main`; no backend credentials belong in any tracked file.
 
 Run `python3 tests/check_site.py` on macOS (Python 3 and the system JavaScriptCore framework). This retains the original shell checks and adds synthetic response-shape regression tests for login, bootstrap, session restoration, rules, bonus hands, reservation settings, and logout. It uses a minimal DOM and mocked API; it makes no network calls and includes no real credentials or protected club data.
 

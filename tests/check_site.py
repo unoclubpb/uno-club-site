@@ -40,7 +40,7 @@ const window={addEventListener(){}};
 const navigator={userAgent:"iPhone",platform:"iPhone"};
 function assert(v,m){if(!v)throw Error(m)}
 '''
-print(evaluate(setup+(root/'app.js').read_text()+'\n"JavaScript parsed and initialized"'))
+print(evaluate(setup+(root/'app.js').read_text()+(root/'admin.js').read_text()+'\n"JavaScript parsed and initialized"'))
 tests='''
 var result="pending";
 (async()=>{
@@ -114,7 +114,45 @@ var result="pending";
  $("username").value="test-member";$("pin").value=String(10 ** 3);
  await $("login-form").handlers.submit({preventDefault(){}});
  assert(!token&&!user,"legacy token field rejected");
- result="PASS: live response shapes, login, bootstrap, restore, rules, bonus hands, settings SMS, logout; guest/admin gates, text rendering, invalid SMS, empty content, stale responses, session expiry";
+ // Admin screen and response regressions, using synthetic records only.
+ user={username:"test-member",is_admin:true};saveToken("synthetic-session");
+ const adminCalls=[];
+ const responses={admin_users:{users:[{id:"self",username:"test-member",display_name:"Member",is_admin:true,is_active:true,created_at:"2026-01-01"},{id:"other",username:"other",display_name:"Other",is_admin:false,is_active:true,created_at:"2026-01-01"}],current_user_id:"self"},admin_rules:{rules:[{id:1,body:"Current rules"}]},admin_games:{game_schedule:[]},admin_bonus:{bonus_hands:[]},admin_settings:{settings:{reservation_phone_1:"",reservation_phone_2:""}}};
+ api=async(action,fields)=>{adminCalls.push({action,fields});return responses[action] || {ok:true}};
+ for(const section of ["users","rules","games","bonus","settings","pin"]){
+   await openAdmin(section);
+   assert(elements.content.children[0].textContent==="← Back to Admin","admin back button");
+   assert(elements["content-title"].textContent===adminSections[section],"section title");
+   assert(elements.content.children.length>=2,"section form");
+ }
+ await openAdmin("users");
+ const ownCard=elements.content.children[2];
+ assert(ownCard.children.length===3&&ownCard.children[2].textContent==="Change My PIN","no self-disable or self-reset control");
+ await openAdmin("pin");
+ const pinForm=elements.content.children[1];
+ pinForm.children[1].children[0].value="1234";
+ pinForm.children[2].children[0].value="5678";
+ pinForm.children[3].children[0].value="5678";
+ await pinForm.handlers.submit({preventDefault(){}});
+ assert(adminCalls[adminCalls.length-1].action==="change_pin","PIN action");
+ assert(pinForm.children[1].children[0].value===""&&pinForm.children[2].children[0].value==="","PIN inputs cleared");
+ assert(elements.status.textContent==="Saved.","save feedback");
+ window.confirm=()=>false;const count=adminCalls.length;
+ await adminDelete("games","admin_delete_game","synthetic","test");
+ assert(adminCalls.length===count,"cancel deletion makes no request");
+ window.confirm=()=>true;
+ await adminDelete("games","admin_delete_game","synthetic","test");
+ assert(adminCalls.some(c=>c.action==="admin_delete_game"),"confirmed delete action");
+ api=async()=>({wrong:[]});await openAdmin("games");
+ assert(elements.status.textContent.includes("incomplete"),"bad admin response handled");
+ api=async()=>{const error=Error("Forbidden");error.status=403;throw error};
+ await openAdmin("users");assert(elements.status.textContent==="Forbidden","admin denial shown");
+ assert(elements.content.children.length===2,"denied screen contains back and retry only");
+ renderContent("schedule",{game_schedule:[{game_name:"later",day_name:"Tue",day_sort:2,sort_order:0,is_active:true},{game_name:"first",day_name:"Mon",day_sort:1,sort_order:1,is_active:true,start_time:"19:00:00"},{game_name:"hidden",day_name:"Mon",is_active:false}],settings:{reservation_phone_1:"+15555550100"}});
+ assert(elements.content.children[0].children.length===2,"only active real-shape games");
+ assert(elements.content.children[0].children[0].children[0].textContent==="first","real-shape schedule sorted");
+ assert(decodeURIComponent(elements.content.children[0].children[0].children[2].href.split("body=")[1])==="I would like to reserve a seat for the first game on Mon.","real-shape SMS unchanged");
+ result="PASS: Admin screens, saves, confirmations, authorization errors, PIN clearing, real schedule fields; live response shapes, login, bootstrap, restore, rules, bonus hands, settings SMS, logout; guest/admin gates, text rendering, invalid SMS, empty content, stale responses, session expiry";
 })().catch(e=>result="FAIL: "+e.message);
 '''
 evaluate(tests)
