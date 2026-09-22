@@ -78,7 +78,18 @@ function card(title, body) {
   return element;
 }
 function renderContent(page, data) {
-  const items = page === "schedule" ? data?.games : data?.sections;
+  let items;
+  if (page === "schedule") items = data?.game_schedule;
+  else if (page === "rules" && Array.isArray(data?.rules)) {
+    items = data.rules.slice(0, 1).map((rule) => ({ title: titles.rules, body: rule?.body }));
+  } else if (page === "bonus" && Array.isArray(data?.bonus_hands)) {
+    items = data.bonus_hands.filter((hand) => hand && hand.is_active === true)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map((hand) => ({
+        title: hand.hand_name,
+        body: [hand.payout_text, hand.description].filter((value) => typeof value === "string" && value).join("\n"),
+      }));
+  }
   if (!Array.isArray(items)) throw new Error("The service returned an unexpected response. Please try again later.");
   const fragment = document.createDocumentFragment();
   for (const item of items) {
@@ -89,16 +100,21 @@ function renderContent(page, data) {
       ? card(item.name, [item.day, item.time, item.details].filter((v) => typeof v === "string" && v).join("\n"))
       : card(item.title, item.body);
     if (page === "schedule") {
-      // Accept only a single international-format number in SMS links.
-      if (typeof item.reservation_phone === "string" && /^\+[1-9][0-9]{6,14}$/.test(item.reservation_phone)) {
+      // Prefer a game-specific number; otherwise offer the configured contacts.
+      const phones = [...new Set([
+        item.reservation_phone || data.settings?.reservation_phone_1,
+        item.reservation_phone ? null : data.settings?.reservation_phone_2,
+      ].filter((phone) => typeof phone === "string" && /^\+[1-9][0-9]{6,14}$/.test(phone)))];
+      for (const [index, phone] of phones.entries()) {
         const link = document.createElement("a");
         link.className = "button";
         const body = `I would like to reserve a seat for the ${item.name} game on ${item.day}.`;
         const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-        link.href = `sms:${item.reservation_phone}${ios ? "&" : "?"}body=${encodeURIComponent(body)}`;
-        link.textContent = "Request a seat by SMS";
+        link.href = `sms:${phone}${ios ? "&" : "?"}body=${encodeURIComponent(body)}`;
+        link.textContent = phones.length > 1 ? `Request a seat by SMS (${index + 1})` : "Request a seat by SMS";
         element.append(link);
-      } else {
+      }
+      if (!phones.length) {
         const hint = document.createElement("p");
         hint.className = "hint";
         hint.textContent = "SMS seat requests are not available for this game yet.";
@@ -127,8 +143,11 @@ async function navigate(page) {
   }
   status("Loading…");
   try {
-    const data = await api(page);
+    const data = await api("bootstrap");
     if (current !== revision) return;
+    if (!validUser(data?.user)) throw new Error("The service returned an incomplete user profile.");
+    user = data.user;
+    show("content");
     renderContent(page, data);
     status();
   } catch (error) {
@@ -156,9 +175,9 @@ $("login-form").addEventListener("submit", async (event) => {
   try {
     const data = await api("login", { username, pin }, "");
     if (current !== revision) return;
-    if (typeof data?.session_token !== "string" || !data.session_token || !validUser(data.user)) throw new Error("The login response was incomplete. Please try again later.");
+    if (typeof data?.session_token !== "string" || !data.session_token || !validUser(data)) throw new Error("The login response was incomplete. Please try again later.");
     saveToken(data.session_token);
-    user = data.user;
+    user = { username: data.username, display_name: data.display_name, is_admin: data.is_admin };
     $("login-form").reset();
     navigate("menu");
   } catch (error) { if (current === revision) status(error.message); }
@@ -182,7 +201,7 @@ async function initialize() {
   $("login-submit").disabled = true;
   status("Checking your session…");
   try {
-    const data = await api("session");
+    const data = await api("bootstrap");
     if (current !== revision) return;
     if (!validUser(data?.user)) throw new Error("Please log in again.");
     user = data.user;

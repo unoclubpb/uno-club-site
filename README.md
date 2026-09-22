@@ -6,22 +6,29 @@ Independent Uno Club informational website, **v0.2.0**, using plain HTML, CSS, a
 
 Run `python3 -m http.server 8000` here and visit `http://localhost:8000`. For GitHub Pages, publish the repository root from your chosen branch in Settings → Pages. Relative asset paths support `/uno-club-site/`; `.nojekyll` keeps deployment static. This initial implementation does not deploy anything.
 
-Set **`EDGE_FUNCTION_URL` at the top of `app.js`** to your HTTPS project URL ending in `/functions/v1/uno-site-api`. It is intentionally empty until the project URL is supplied. The custom session contract needs no browser Supabase key or SDK. Never add secret/service-role keys, database passwords, PINs, PIN hashes, reservation numbers, or protected content to this repository.
+Set **`EDGE_FUNCTION_URL` at the top of `app.js`** to your HTTPS project URL ending in `/functions/v1/uno-site-api`. The project URL is configured. The custom session contract needs no browser Supabase key or SDK. Never add secret/service-role keys, database passwords, PINs, PIN hashes, reservation numbers, or protected content to this repository.
 
-## Expected API contract
+## API response contract
 
-This is a proposed contract for the backend to implement, not a deployed backend. Adjust the frontend adapter if the actual backend uses another contract. Requests are JSON `POST` bodies containing `action`. Authenticated calls send `Authorization: Bearer <session_token>`; tokens never go in URLs.
+The frontend consumes the tested login and bootstrap response shapes. The Edge Function is maintained separately. Requests are JSON `POST` bodies containing `action`. Authenticated calls send `Authorization: Bearer <session_token>`; tokens never go in URLs.
 
 | Action | Additional request fields | Successful JSON response |
 | --- | --- | --- |
-| `login` | `username`: string, `pin`: four-digit string | `session_token`: nonempty string, `user`: user object |
-| `session` | None | `user`: user object |
-| `rules` | None | `sections`: array of `{title: string, body: string}` |
-| `schedule` | None | `games`: array of game objects |
-| `bonus` | None | `sections`: array of `{title: string, body: string}` |
-| `logout` | None | `{}` after revoking the session |
+| `login` | `username`: string, `pin`: four-digit string | Top-level `session_token`, `username`, `display_name`, `is_admin`, `expires_at` |
+| `bootstrap` | None | `user`, `rules`, `game_schedule`, `bonus_hands`, `settings` |
+| `logout` | None | `{}` after revoking the session (existing contract) |
 
-A user object contains `username: string` and `is_admin: boolean`. A game contains `name: string`, `day: string`, and optional `time: string`, `details: string`, `reservation_phone: string | null`. The backend supplies display-ready game/day text and a single international-format number beginning with `+`, or omits the number when unavailable. No protected examples or fallback data belong in the shell.
+Login reads the top-level profile and stores only `session_token`, under the unchanged `uno-club-site-session` localStorage key. Restoring a session calls `bootstrap` to validate it. Opening a member content page also calls `bootstrap` with the session token; no separate rules, schedule, bonus, or session actions are used.
+
+Bootstrap fields:
+
+- `user`: `username`, `display_name`, and boolean `is_admin`.
+- `rules`: an array; the page displays the first row's `body` when present.
+- `game_schedule`: an array. The supplied live response is empty, so populated row fields still need live verification. The existing renderer expects `name`, `day`, and optional `time`, `details`, and `reservation_phone`.
+- `bonus_hands`: active entries sorted by `sort_order`, displaying `hand_name`, `payout_text`, and `description`. IDs and timestamps are not rendered.
+- `settings`: optional `reservation_phone_1` and `reservation_phone_2`. Empty numbers leave SMS unavailable. When a game has no specific number, the site offers each distinct valid settings number. Numbers must be in international format beginning with `+`.
+
+No protected examples or fallback data belong in the shell.
 
 SMS links open the device composer; they do not send a message or confirm a reservation. The body is exactly:
 
@@ -47,4 +54,6 @@ Use HTTP `401` for invalid credentials or expired/revoked sessions, `403` for de
 
 Admin includes placeholders for Users, Rules, Games Schedule, Bonus Hands, Reservation Numbers, and Change My PIN. No admin mutations are implemented.
 
-Before production, verify login failures/success, session expiry, logout, ordinary/admin users, empty/populated content, network failures, and SMS composition on iPhone. Live authentication requires the function URL and backend and cannot yet be verified.
+Run `python3 tests/check_site.py` on macOS (Python 3 and the system JavaScriptCore framework). This retains the original shell checks and adds synthetic response-shape regression tests for login, bootstrap, session restoration, rules, bonus hands, reservation settings, and logout. It uses a minimal DOM and mocked API; it makes no network calls and includes no real credentials or protected club data.
+
+The user has tested the real API shapes. Automated checks do not replace live browser authentication, populated schedule verification, or SMS composition testing on iPhone.
