@@ -1,7 +1,7 @@
 "use strict";
 
 // Set to https://<project-ref>.supabase.co/functions/v1/uno-site-api.
-const EDGE_FUNCTION_URL = "";
+const EDGE_FUNCTION_URL = "https://xnfudstmpejjmmwpqqgz.supabase.co/functions/v1/uno-site-api";
 const SESSION_KEY = "uno-club-site-session";
 const titles = { rules: "Uno Club Rules", schedule: "Games Schedule", bonus: "Bonus Hands Info", admin: "Admin" };
 const $ = (id) => document.getElementById(id);
