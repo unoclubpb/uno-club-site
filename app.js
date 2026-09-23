@@ -91,8 +91,8 @@ function card(title, body) {
   return element;
 }
 const reservationRecipients = {
-  Monday: "+16788307590",
-  Wednesday: "+16788307590",
+  Monday: "+16788307596",
+  Wednesday: "+16788307596",
   Thursday: "+17708615443",
 };
 function renderPermanentSchedule() {
