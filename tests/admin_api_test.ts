@@ -80,7 +80,7 @@ Deno.test("management save/delete routes parameterize validated values", async (
   const cases: [string, Record<string, unknown>][] = [
     ["admin_save_rules",{body:"<synthetic>"}],
     ["admin_save_game",{day_name:"Monday",game_name:"Synthetic",start_time:"19:30",is_active:true}],
-    ["admin_save_bonus",{hand_name:"Synthetic",payout_text:"",description:"",sort_order:1,is_active:false}],
+    ["admin_save_bonus",{body:"Synthetic bonus text\nSecond paragraph"}],
     ["admin_delete_game",{id:targetId}], ["admin_delete_bonus",{id:targetId}],
     ["admin_save_settings",{reservation_phone_1:"",reservation_phone_2:"+15555550100"}],
   ];
@@ -94,7 +94,7 @@ Deno.test("management save/delete routes parameterize validated values", async (
   reset(); assertEquals((await request("admin_delete_bonus",{id:"bad"})).status,400);
 });
 Deno.test("health/CORS preserved; malformed body rejected without leaking details", async () => {
-  reset(); const res = await request("health",{},false); assertEquals((await res.json()).version,"0.5.0");
+  reset(); const res = await request("health",{},false); assertEquals((await res.json()).version,"0.7.0");
   assertEquals(res.headers.get("Access-Control-Allow-Origin"),"*");
   assertEquals((await handler(new Request("https://example.invalid",{method:"OPTIONS"}))).status,204);
   assertEquals((await handler(new Request("https://example.invalid",{method:"POST",body:"null"}))).status,400);

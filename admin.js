@@ -1,5 +1,5 @@
 "use strict";
-const adminSections = { users: "Users", rules: "Rules", games: "Games Schedule", bonus: "Bonus Hands", settings: "Reservation Numbers", pin: "Change My PIN" };
+const adminSections = { users: "Users", rules: "Rules", bonus: "Bonus Hands", settings: "Reservation Numbers", pin: "Change My PIN" };
 function adminButton(label, fn, className = "button") {
   const button = document.createElement("button");
   button.type = "button"; button.className = className; button.textContent = label;
@@ -10,9 +10,6 @@ function adminMenu() {
     if (section === "pin") continue;
     $("content").append(adminButton(label, () => openAdmin(section), "button admin-menu-button"));
   }
-  const pin = adminButton("Change My PIN", () => openAdmin("pin"), "button utility-button");
-  pin.id = "change-pin-button";
-  $("content").append(pin);
 }
 function adminForm(title, fields, values, submitLabel, onSubmit) {
   const form = document.createElement("form"); form.className = "card admin-form";
@@ -77,18 +74,17 @@ async function openAdmin(section) {
       return;
     }
     status("Loading…");
-    const data = await api({users:"admin_users",rules:"admin_rules",games:"admin_games",bonus:"admin_bonus",settings:"admin_settings"}[section]);
+    const data = await api({users:"admin_users",rules:"admin_rules",bonus:"admin_bonus",settings:"admin_settings"}[section]);
     if (current !== revision) return;
-    const key = {users:"users",rules:"rules",games:"game_schedule",bonus:"bonus_hands",settings:"settings"}[section];
-    if (section === "settings" ? !data?.settings || typeof data.settings !== "object" : !Array.isArray(data?.[key])) throw new Error("The service returned incomplete information.");
+    const key = {users:"users",rules:"rules",bonus:"bonus_text",settings:"settings"}[section];
+    if (section === "settings" ? !data?.settings || typeof data.settings !== "object" : section === "bonus" ? typeof data?.bonus_text !== "string" : !Array.isArray(data?.[key])) throw new Error("The service returned incomplete information.");
     status();
     if (section === "users") {
       $("content").append(adminForm("Add user", [["username","Username"],["display_name","Display name"],["pin","4-digit PIN","password"],["is_admin","Administrator?","boolean"]], {is_admin:false}, "Add user", (p,r) => saveAdmin(section,"admin_add_user",p,r)));
       for (const member of data.users) {
         const own = member.id === data.current_user_id;
         const item = card(member.username, `${member.display_name}\nAdministrator: ${member.is_admin ? "Yes" : "No"}\nActive: ${member.is_active ? "Yes" : "No"}\nCreated: ${new Date(member.created_at).toLocaleDateString()}`);
-        if (own) item.append(adminButton("Change My PIN", () => openAdmin("pin")));
-        else {
+        if (!own) {
           const toggle = adminButton(member.is_active ? "Disable user" : "Reactivate user", async () => {
             if (member.is_active && !window.confirm(`Disable ${member.username}? Their sessions will end.`)) return;
             toggle.disabled = true;
@@ -104,17 +100,8 @@ async function openAdmin(section) {
       $("content").append(adminForm("Uno Club rules", [["body","Rules","textarea",false]], data.rules[0] || {}, "Save rules", (p,r) => saveAdmin(section,"admin_save_rules",p,r,"rules")));
     } else if (section === "settings") {
       $("content").append(card("Reservation contacts", "Use a 10-digit US number or international format. Leave blank to remove a contact."), adminForm("Reservation Numbers", [["reservation_phone_1","Phone number 1","tel",false],["reservation_phone_2","Phone number 2","tel",false]], data.settings, "Save numbers", (p,r) => saveAdmin(section,"admin_save_settings",p,r)));
-    } else {
-      const games = section === "games";
-      const fields = games ? [["day_name","Day"],["game_name","Game name"],["start_time","Start time","time",false],["is_active","Active?","boolean"]] : [["hand_name","Hand name"],["payout_text","Payout","text",false],["description","Description","textarea",false],["sort_order","Display order","number"],["is_active","Active?","boolean"]];
-      const action = games ? "admin_save_game" : "admin_save_bonus";
-      $("content").append(adminForm(games ? "Add game" : "Add bonus hand", fields, {}, "Add", (p,r) => saveAdmin(section,action,p,r)));
-      for (const row of data[key]) {
-        const name = games ? row.game_name : row.hand_name;
-        const form = adminForm(`Edit ${name}`, fields, row, "Save changes", (p,r) => saveAdmin(section,action,{...p,id:row.id},r));
-        form.append(adminButton("Delete", () => adminDelete(section,games ? "admin_delete_game" : "admin_delete_bonus",row.id,name),"button danger"));
-        $("content").append(form);
-      }
+    } else if (section === "bonus") {
+      $("content").append(adminForm("Bonus Hands Info", [["body","Bonus Hands Info","textarea",false]], { body: data.bonus_text }, "Save", (p,r) => saveAdmin(section,"admin_save_bonus",p,r,"bonus")));
     }
   } catch(error) {
     if(current !== revision) return;

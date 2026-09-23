@@ -52,7 +52,7 @@ var result="pending";
  assert(elements.content.children.length===0,"guest content");
  user={username:"test",is_admin:false};saveToken("temporary-test-token");
  await navigate("admin");assert(!elements["menu-view"].hidden,"admin gate");
- user.is_admin=true;await navigate("admin");assert(elements.content.children.length===6,"admin sections");
+ user.is_admin=true;await navigate("admin");assert(elements.content.children.length===4,"admin sections");
  renderContent("rules",{rules:[{body:"<img>"}]});
  assert(elements.content.children[0].children[0].children[0].textContent==="<img>","text only");
  renderPermanentSchedule({reservation_phone_1:"7708615443",reservation_phone_2:"6788307590"});
@@ -72,7 +72,7 @@ var result="pending";
  // Synthetic data only: no live credentials or protected club content.
  const profile={username:"test-member",display_name:"Test Member",is_admin:true};
  const bootstrap={user:profile,rules:[{id:1,body:"<test-body>",updated_at:"test"}],game_schedule:[],
-   bonus_hands:[{id:"test",hand_name:"Test heading",payout_text:"Test payout",description:"Test description",sort_order:1,is_active:true,created_at:"test",updated_at:"test"}],
+   bonus_hands:[{id:"test",hand_name:"Bonus Hands Info",payout_text:null,description:"Test bonus text\\nSecond paragraph",sort_order:0,is_active:true,created_at:"test",updated_at:"test"}],
    settings:{reservation_phone_1:"",reservation_phone_2:""}};
  const calls=[];
  api=async(action,fields,session)=>{
@@ -88,6 +88,7 @@ var result="pending";
  assert(token==="synthetic-session"&&storage[SESSION_KEY]===token,"top-level login session_token");
  assert(user.username===profile.username&&user.display_name===profile.display_name,"top-level profile");
  assert(!$("admin-button").hidden,"top-level admin flag");
+ assert(!$("change-pin-button").hidden,"Change My PIN main-menu utility");
  assert(calls.length===1&&calls[0].action==="login"&&calls[0].session==="","login before protected fetch");
  assert($("pin").value==="","PIN cleared");
  assert(Object.keys(storage).length===1,"only session persisted");
@@ -102,10 +103,9 @@ var result="pending";
  assert(elements.content.children.length===3&&elements.content.children[1].children[0].textContent==="Wednesday","static schedule after navigation");
  await navigate("bonus");
  const bonus=elements.content.children[0].children[0];
- assert(bonus.children[0].textContent==="Test heading","hand_name");
- assert(bonus.children[1].textContent==="Test payout\\nTest description","payout and description");
- renderContent("bonus",{bonus_hands:[{hand_name:"later",sort_order:2,is_active:true},{hand_name:"hidden",sort_order:0,is_active:false},{hand_name:"earlier",sort_order:1,is_active:true}]});
- assert(elements.content.children[0].children.length===2&&elements.content.children[0].children[0].children[0].textContent==="earlier","active hands sorted");
+ assert(bonus.children[0].textContent==="Test bonus text\\nSecond paragraph","bonus document text");
+ renderContent("bonus",{bonus_hands:[{hand_name:"Bonus Hands Info",description:"later",is_active:true}]});
+ assert(elements.content.children[0].children[0].children[0].textContent==="later","bonus document replacement");
  renderPermanentSchedule({reservation_phone_1:"",reservation_phone_2:""});
  assert(elements.content.children[0].children[1].children[1].textContent==="Reservation unavailable","empty settings disable SMS");
  user=null;await initialize();
@@ -120,17 +120,23 @@ var result="pending";
  // Admin screen and response regressions, using synthetic records only.
  user={username:"test-member",is_admin:true};saveToken("synthetic-session");
  const adminCalls=[];
- const responses={admin_users:{users:[{id:"self",username:"test-member",display_name:"Member",is_admin:true,is_active:true,created_at:"2026-01-01"},{id:"other",username:"other",display_name:"Other",is_admin:false,is_active:true,created_at:"2026-01-01"}],current_user_id:"self"},admin_rules:{rules:[{id:1,body:"Current rules"}]},admin_games:{game_schedule:[]},admin_bonus:{bonus_hands:[]},admin_settings:{settings:{reservation_phone_1:"",reservation_phone_2:""}}};
+ const responses={admin_users:{users:[{id:"self",username:"test-member",display_name:"Member",is_admin:true,is_active:true,created_at:"2026-01-01"},{id:"other",username:"other",display_name:"Other",is_admin:false,is_active:true,created_at:"2026-01-01"}],current_user_id:"self"},admin_rules:{rules:[{id:1,body:"Current rules"}]},admin_bonus:{bonus_text:"Saved bonus text"},admin_settings:{settings:{reservation_phone_1:"",reservation_phone_2:""}}};
  api=async(action,fields)=>{adminCalls.push({action,fields});return responses[action] || {ok:true}};
- for(const section of ["users","rules","games","bonus","settings","pin"]){
+ await navigate("admin");
+ assert(elements.content.children.length===4,"four Admin areas");
+ assert(elements.content.children[0].textContent==="Users"&&elements.content.children[1].textContent==="Rules"&&elements.content.children[2].textContent==="Bonus Hands"&&elements.content.children[3].textContent==="Reservation Numbers","no schedule or PIN Admin areas");
+ for(const section of ["users","rules","bonus","settings","pin"]){
    await openAdmin(section);
    assert(elements.content.children[0].textContent==="← Back to Admin","admin back button");
    assert(elements["content-title"].textContent===adminSections[section],"section title");
    assert(elements.content.children.length>=2,"section form");
  }
+ await openAdmin("bonus");
+ assert(elements.content.children[1].children[1].children[0].value==="Saved bonus text","bonus text editor");
+ assert(elements.content.children[1].children.length===3,"one bonus text field and save");
  await openAdmin("users");
  const ownCard=elements.content.children[2];
- assert(ownCard.children.length===3&&ownCard.children[2].textContent==="Change My PIN","no self-disable or self-reset control");
+ assert(ownCard.children.length===2,"no Change My PIN control inside Admin");
  await openAdmin("pin");
  const pinForm=elements.content.children[1];
  pinForm.children[1].children[0].value="1234";
@@ -140,18 +146,11 @@ var result="pending";
  assert(adminCalls[adminCalls.length-1].action==="change_pin","PIN action");
  assert(pinForm.children[1].children[0].value===""&&pinForm.children[2].children[0].value==="","PIN inputs cleared");
  assert(elements.status.textContent==="Saved.","save feedback");
- window.confirm=()=>false;const count=adminCalls.length;
- await adminDelete("games","admin_delete_game","synthetic","test");
- assert(adminCalls.length===count,"cancel deletion makes no request");
- window.confirm=()=>true;
- await adminDelete("games","admin_delete_game","synthetic","test");
- assert(adminCalls.some(c=>c.action==="admin_delete_game"),"confirmed delete action");
- api=async()=>({wrong:[]});await openAdmin("games");
- assert(elements.status.textContent.includes("incomplete"),"bad admin response handled");
+ assert(elements.content.children[0].textContent==="← Back to Admin","admin back button");
  api=async()=>{const error=Error("Forbidden");error.status=403;throw error};
  await openAdmin("users");assert(elements.status.textContent==="Forbidden","admin denial shown");
  assert(elements.content.children.length===2,"denied screen contains back and retry only");
- result="PASS: permanent schedule, settings-only member schedule, combined SMS recipients, Admin screens, saves, confirmations, authorization errors, PIN clearing; live response shapes, login, bootstrap, restore, rules, bonus hands, logout; guest/admin gates, text rendering, stale responses, session expiry";
+ result="PASS: permanent schedule, settings-only member schedule, combined SMS recipients, simplified bonus text editor, Admin navigation, PIN placement, login, bootstrap, restore, rules, bonus hands, logout; guest/admin gates, duplicate-title removal, stale responses, session expiry";
 })().catch(e=>result="FAIL: "+e.message);
 '''
 evaluate(tests)

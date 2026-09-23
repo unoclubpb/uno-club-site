@@ -12,7 +12,7 @@ const sql = postgres(DATABASE_URL, {
 });
 
 const FUNCTION_NAME = "uno-site-api";
-const VERSION = "0.5.0";
+const VERSION = "0.7.0";
 const SESSION_DAYS = 30;
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_MINUTES = 15;
@@ -185,7 +185,8 @@ async function bootstrap(req: Request): Promise<Response> {
     sql`
       SELECT * FROM public.bonus_hands
       WHERE is_active = true
-      ORDER BY sort_order
+      ORDER BY sort_order, created_at
+      LIMIT 1
     `,
     sql`SELECT * FROM public.site_settings`,
   ]);
@@ -354,7 +355,8 @@ async function management(req: Request, body: Record<string, unknown>): Promise<
     } else if (action === "admin_games") {
       return json({ game_schedule: await tx`SELECT id, day_name, day_sort, game_name, start_time, sort_order, is_active FROM public.game_schedule ORDER BY day_sort, CASE WHEN lower(game_name) = 'tournament' THEN 1 ELSE 0 END, start_time, lower(game_name)` });
     } else if (action === "admin_bonus") {
-      return json({ bonus_hands: await tx`SELECT id, hand_name, payout_text, description, sort_order, is_active FROM public.bonus_hands ORDER BY sort_order` });
+      const rows = await tx`SELECT description FROM public.bonus_hands ORDER BY sort_order, created_at LIMIT 1`;
+      return json({ bonus_text: typeof rows[0]?.description === "string" ? rows[0].description : "" });
     } else if (action === "admin_save_game") {
       const day = scheduleDay(body.day_name);
       const name = textValue(body.game_name, "game name", 200);
@@ -369,14 +371,12 @@ async function management(req: Request, body: Record<string, unknown>): Promise<
         if (!rows.length) return json({ error: "Game not found. Refresh and try again." }, 404);
       }
     } else if (action === "admin_save_bonus") {
-      const name = textValue(body.hand_name, "hand name", 200), payout = textValue(body.payout_text, "payout", 1000, true), description = textValue(body.description, "description", 10000, true);
-      const sort = integer(body.sort_order), active = flag(body.is_active);
-      if (body.id == null) {
-        await tx`INSERT INTO public.bonus_hands (hand_name, payout_text, description, sort_order, is_active) VALUES (${name}, ${payout}, ${description}, ${sort}, ${active})`;
+      const bodyText = textValue(body.body, "Bonus Hands Info", 100000, true);
+      const rows = await tx`SELECT id FROM public.bonus_hands ORDER BY sort_order, created_at LIMIT 1 FOR UPDATE`;
+      if (rows.length) {
+        await tx`UPDATE public.bonus_hands SET description=${bodyText}, is_active=true, updated_at=now() WHERE id=${rows[0].id}`;
       } else {
-        const id = uuid(body.id);
-        const rows = await tx`UPDATE public.bonus_hands SET hand_name=${name}, payout_text=${payout}, description=${description}, sort_order=${sort}, is_active=${active}, updated_at=now() WHERE id=${id} RETURNING id`;
-        if (!rows.length) return json({ error: "Bonus hand not found. Refresh and try again." }, 404);
+        await tx`INSERT INTO public.bonus_hands (hand_name, payout_text, description, sort_order, is_active) VALUES ('Bonus Hands Info', NULL, ${bodyText}, 0, true)`;
       }
     } else if (action === "admin_delete_game" || action === "admin_delete_bonus") {
       const id = uuid(body.id);

@@ -26,6 +26,7 @@ function show(view) {
   for (const name of ["login", "menu", "content"]) $(name + "-view").hidden = name !== view;
   $("logout").hidden = !user;
   $("admin-button").hidden = user?.is_admin !== true;
+  $("change-pin-button").hidden = !user;
   $("menu-hint").hidden = !!user;
   $(view + "-title").focus();
 }
@@ -143,12 +144,8 @@ function renderContent(page, data) {
   if (page === "rules" && Array.isArray(data?.rules)) {
     items = data.rules.slice(0, 1).map((rule) => ({ title: "", body: rule?.body }));
   } else if (page === "bonus" && Array.isArray(data?.bonus_hands)) {
-    items = data.bonus_hands.filter((hand) => hand && hand.is_active === true)
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-      .map((hand) => ({
-        title: hand.hand_name === titles.bonus ? "" : hand.hand_name,
-        body: [hand.payout_text, hand.description].filter((value) => typeof value === "string" && value).join("\n"),
-      }));
+    const hand = data.bonus_hands.find((entry) => entry && entry.is_active !== false);
+    items = hand ? [{ title: "", body: typeof hand.description === "string" ? hand.description : "" }] : [];
   }
   if (!Array.isArray(items)) throw new Error("The service returned an unexpected response. Please try again later.");
   const fragment = document.createDocumentFragment();
@@ -260,4 +257,5 @@ async function initialize() {
   } catch (error) { if (current === revision) clearSession(error.message); }
   finally { $("login-submit").disabled = false; }
 }
+$("change-pin-button").addEventListener("click", () => openAdmin("pin"));
 initialize();
