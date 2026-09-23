@@ -4,6 +4,11 @@
 const EDGE_FUNCTION_URL = "https://xnfudstmpejjmmwpqqgz.supabase.co/functions/v1/uno-site-api";
 const SESSION_KEY = "uno-club-site-session";
 const titles = { rules: "Uno Club Rules", schedule: "Games Schedule", bonus: "Bonus Hands Info", admin: "Admin" };
+const permanentSchedule = [
+  { day: "Monday", games: ["Hold Em", "Omaha"] },
+  { day: "Wednesday", games: ["Tournament", "Omaha"] },
+  { day: "Thursday", games: ["Hold Em", "Omaha"] },
+];
 const $ = (id) => document.getElementById(id);
 let token = "";
 let user = null;
@@ -82,6 +87,55 @@ function card(title, body) {
   element.append(heading, text);
   return element;
 }
+function reservationPhone(value) {
+  if (typeof value !== "string") return "";
+  const digits = value.replace(/[^0-9]/g, "");
+  if (/^1[2-9][0-9]{9}$/.test(digits)) return `+${digits}`;
+  if (/^[2-9][0-9]{9}$/.test(digits)) return `+1${digits}`;
+  if (/^[1-9][0-9]{6,14}$/.test(digits)) return `+${digits}`;
+  return "";
+}
+function renderPermanentSchedule(settings) {
+  const phones = [...new Set([
+    reservationPhone(settings?.reservation_phone_1),
+    reservationPhone(settings?.reservation_phone_2),
+  ].filter(Boolean))];
+  const recipients = phones.join(",");
+  const fragment = document.createDocumentFragment();
+  for (const { day, games } of permanentSchedule) {
+    const section = document.createElement("section");
+    section.className = "schedule-day";
+    const heading = document.createElement("h2");
+    heading.textContent = day;
+    section.append(heading);
+    for (const game of games) {
+      const row = document.createElement("div");
+      row.className = "schedule-game";
+      const name = document.createElement("span");
+      name.textContent = game;
+      row.append(name);
+      if (recipients) {
+        const link = document.createElement("a");
+        link.className = "button reserve-button";
+        const body = `I would like to reserve a seat for ${game} on ${day}.`;
+        const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        link.href = `sms:${recipients}${ios ? "&" : "?"}body=${encodeURIComponent(body)}`;
+        link.textContent = "Reserve Seat";
+        row.append(link);
+      } else {
+        const hint = document.createElement("span");
+        hint.className = "hint";
+        hint.textContent = "Reservation unavailable";
+        row.append(hint);
+      }
+      section.append(row);
+    }
+    fragment.append(section);
+  }
+  // Append sections directly so each day remains a distinct, accessible block.
+  $("content").replaceChildren();
+  for (const section of fragment.children) $("content").append(section);
+}
 function renderContent(page, data) {
   let items;
   if (page === "schedule" && Array.isArray(data?.game_schedule)) items = data.game_schedule
@@ -145,6 +199,25 @@ async function navigate(page) {
   show("content");
   if (page === "admin") {
     adminMenu();
+    return;
+  }
+  if (page === "schedule") {
+    status("Loading…");
+    try {
+      const data = await api("member_settings");
+      if (current !== revision) return;
+      renderPermanentSchedule(data?.settings);
+      status();
+    } catch (error) {
+      if (current !== revision) return;
+      if (error.status === 401) { clearSession(error.message); return; }
+      status(error.message);
+      const retry = document.createElement("button");
+      retry.className = "button";
+      retry.textContent = "Try again";
+      retry.addEventListener("click", () => navigate(page));
+      $("content").append(retry);
+    }
     return;
   }
   status("Loading…");

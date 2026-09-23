@@ -97,7 +97,7 @@ async function openAdmin(section) {
     } else if (section === "rules") {
       $("content").append(adminForm("Uno Club rules", [["body","Rules","textarea",false]], data.rules[0] || {}, "Save rules", (p,r) => saveAdmin(section,"admin_save_rules",p,r,"rules")));
     } else if (section === "settings") {
-      $("content").append(card("Reservation contacts", "Use international format (+ followed by country code and number). Leave blank to remove a contact."), adminForm("Reservation Numbers", [["reservation_phone_1","Phone number 1","tel",false],["reservation_phone_2","Phone number 2","tel",false]], data.settings, "Save numbers", (p,r) => saveAdmin(section,"admin_save_settings",p,r)));
+      $("content").append(card("Reservation contacts", "Use a 10-digit US number or international format. Leave blank to remove a contact."), adminForm("Reservation Numbers", [["reservation_phone_1","Phone number 1","tel",false],["reservation_phone_2","Phone number 2","tel",false]], data.settings, "Save numbers", (p,r) => saveAdmin(section,"admin_save_settings",p,r)));
     } else {
       const games = section === "games";
       const fields = games ? [["day_name","Day"],["day_sort","Day order","number"],["game_name","Game name"],["start_time","Start time","time",false],["sort_order","Display order","number"],["is_active","Active?","boolean"]] : [["hand_name","Hand name"],["payout_text","Payout","text",false],["description","Description","textarea",false],["sort_order","Display order","number"],["is_active","Active?","boolean"]];

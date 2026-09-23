@@ -13,6 +13,8 @@ const fakeSql = Object.assign(async (strings: TemplateStringsArray, ...values: u
   const text = strings.join("?").replace(/\s+/g, " ");
   queries.push({ text, values });
   if (text.includes("FROM public.site_sessions s JOIN")) return actor ? [actor] : [];
+  if (text.includes("FROM public.site_sessions AS s")) return actor ? [{ id: targetId }] : [];
+  if (text.includes("SELECT setting_key, setting_value")) return [{ setting_key: "reservation_phone_1", setting_value: "7708615443" }];
   if (text.includes("SELECT id FROM public.site_users WHERE lower")) return duplicate ? [{ id: targetId }] : [];
   if (text.includes("SELECT id FROM public.site_users WHERE id")) return [{ id: targetId }];
   if (text.includes("SELECT failed_attempts")) return [{ failed_attempts: 0, locked_until: null, matches }];
@@ -92,8 +94,16 @@ Deno.test("management save/delete routes parameterize validated values", async (
   reset(); assertEquals((await request("admin_delete_bonus",{id:"bad"})).status,400);
 });
 Deno.test("health/CORS preserved; malformed body rejected without leaking details", async () => {
-  reset(); const res = await request("health",{},false); assertEquals((await res.json()).version,"0.3.0");
+  reset(); const res = await request("health",{},false); assertEquals((await res.json()).version,"0.4.0");
   assertEquals(res.headers.get("Access-Control-Allow-Origin"),"*");
   assertEquals((await handler(new Request("https://example.invalid",{method:"OPTIONS"}))).status,204);
   assertEquals((await handler(new Request("https://example.invalid",{method:"POST",body:"null"}))).status,400);
+});
+Deno.test("member settings requires an active session and never reads the schedule table", async () => {
+  reset(null);
+  assertEquals((await request("member_settings")).status, 401);
+  reset(false);
+  const response = await request("member_settings");
+  assertEquals(response.status, 200);
+  assert(!queries.some((query) => query.text.includes("game_schedule")));
 });

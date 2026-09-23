@@ -12,7 +12,7 @@ const sql = postgres(DATABASE_URL, {
 });
 
 const FUNCTION_NAME = "uno-site-api";
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 const SESSION_DAYS = 30;
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_MINUTES = 15;
@@ -244,7 +244,35 @@ function pinValue(value: unknown): string {
   if (!isFourDigitPin(value)) throw new InputError("Enter a four-digit PIN.");
   return value;
 }
+function reservationSetting(value: unknown): string {
+  if (typeof value !== "string" || value.length > 20 || (value !== "" && !/^(?:\+?[1-9][0-9]{6,14}|[2-9][0-9]{9})$/.test(value))) {
+    throw new InputError("Use a valid phone number or leave blank.");
+  }
+  return value;
+}
 const adminActions = new Set(["admin_users", "admin_add_user", "admin_user_active", "admin_reset_pin", "admin_rules", "admin_save_rules", "admin_games", "admin_save_game", "admin_delete_game", "admin_bonus", "admin_save_bonus", "admin_delete_bonus", "admin_settings", "admin_save_settings"]);
+
+async function memberSettings(req: Request): Promise<Response> {
+  const token = bearerToken(req);
+  if (!token) return json({ error: "Unauthorized" }, 401);
+  const tokenHash = await sha256Hex(token);
+  const sessions = await sql`
+    SELECT s.id
+    FROM public.site_sessions AS s
+    JOIN public.site_users AS u ON u.id = s.user_id
+    WHERE s.token_hash = ${tokenHash}
+      AND s.expires_at > now()
+      AND u.is_active = true
+    LIMIT 1
+  `;
+  if (!sessions[0]) return json({ error: "Unauthorized" }, 401);
+  const rows = await sql`
+    SELECT setting_key, setting_value
+    FROM public.site_settings
+    WHERE setting_key IN ('reservation_phone_1', 'reservation_phone_2')
+  `;
+  return json({ settings: Object.fromEntries(rows.map((row) => [row.setting_key, row.setting_value])) });
+}
 
 async function management(req: Request, body: Record<string, unknown>): Promise<Response> {
   const token = bearerToken(req);
@@ -349,8 +377,7 @@ async function management(req: Request, body: Record<string, unknown>): Promise<
       return json({ settings: Object.fromEntries(rows.map(r => [r.setting_key, r.setting_value])) });
     } else if (action === "admin_save_settings") {
       for (const key of ["reservation_phone_1", "reservation_phone_2"]) {
-        const phone = textValue(body[key], "phone number", 16, true);
-        if (phone && !/^\+[1-9][0-9]{6,14}$/.test(phone)) throw new InputError("Use international phone format, such as + followed by country code and number, or leave blank.");
+        const phone = reservationSetting(body[key]);
         await tx`INSERT INTO public.site_settings (setting_key, setting_value) VALUES (${key}, ${phone}) ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = now()`;
       }
     } else return json({ error: "Unknown action" }, 400);
@@ -372,6 +399,7 @@ Deno.serve(async (req: Request) => {
     }
     if (action === "login") return await login(body);
     if (action === "bootstrap") return await bootstrap(req);
+    if (action === "member_settings") return await memberSettings(req);
     if (action === "logout") return await logout(req);
 
     if (adminActions.has(action) || action === "change_pin") return await management(req, body);

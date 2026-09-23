@@ -1,6 +1,6 @@
 # uno-club-site
 
-Independent Uno Club informational website, **v0.3.0**, using plain HTML, CSS, and JavaScript with no dependencies or build step. GitHub contains only the public site shell. Protected data and authentication live in Supabase behind the `uno-site-api` Edge Function. No other Uno Club repository or app is used.
+Independent Uno Club informational website, **v0.4.0**, using plain HTML, CSS, and JavaScript with no dependencies or build step. GitHub contains only the public site shell. Protected data and authentication live in Supabase behind the `uno-site-api` Edge Function. No other Uno Club repository or app is used.
 
 ## Preview and hosting
 
@@ -16,17 +16,20 @@ The frontend consumes the tested login and bootstrap response shapes. The downlo
 | --- | --- | --- |
 | `login` | `username`: string, `pin`: four-digit string | Top-level `session_token`, `username`, `display_name`, `is_admin`, `expires_at` |
 | `bootstrap` | None | `user`, `rules`, `game_schedule`, `bonus_hands`, `settings` |
+| `member_settings` | None | `settings` (authenticated reservation contacts for the permanent member schedule) |
 | `logout` | None | `{}` after revoking the session (existing contract) |
 
-Login reads the top-level profile and stores only `session_token`, under the unchanged `uno-club-site-session` localStorage key. Restoring a session calls `bootstrap` to validate it. Opening a member content page also calls `bootstrap` with the session token; no separate rules, schedule, bonus, or session actions are used.
+Login reads the top-level profile and stores only `session_token`, under the unchanged `uno-club-site-session` localStorage key. Restoring a session calls `bootstrap` to validate it. Rules and Bonus Hands use `bootstrap`; the permanent member-facing Games Schedule calls authenticated `member_settings` only and never reads `game_schedule`.
 
 Bootstrap fields:
 
 - `user`: `username`, `display_name`, and boolean `is_admin`.
 - `rules`: an array; the page displays the first row's `body` when present.
-- `game_schedule`: an array. The live fields are `game_name`, `day_name`, `start_time`, `day_sort`, `sort_order`, and `is_active`. The renderer also accepts legacy `name`, `day`, and `time` fields. It shows active games ordered by day and display order.
+- `game_schedule`: an array retained for API compatibility and Admin CRUD. It is not used by the member-facing Games Schedule.
 - `bonus_hands`: active entries sorted by `sort_order`, displaying `hand_name`, `payout_text`, and `description`. IDs and timestamps are not rendered.
-- `settings`: optional `reservation_phone_1` and `reservation_phone_2`. Empty numbers leave SMS unavailable. When a game has no specific number, the site offers each distinct valid settings number. Numbers must be in international format beginning with `+`.
+- `settings`: optional `reservation_phone_1` and `reservation_phone_2`. The permanent member schedule uses these authenticated values as hidden recipients. Ten-digit US values and international values are accepted and normalized to SMS URI format in memory. Empty numbers leave reservation unavailable.
+
+The permanent member schedule is Monday (Hold Em, Omaha), Wednesday (Tournament, Omaha), and Thursday (Hold Em, Omaha). Each game has one `Reserve Seat` button addressed to both configured contacts.
 
 No protected examples or fallback data belong in the shell.
 
@@ -58,7 +61,7 @@ Rules save to row 1 and open the refreshed member Rules page. Games and bonus ha
 
 The existing case-insensitive unique index `site_users_username_unique` on `lower(username)` protects concurrent user creation. No schema changes are required. Authentication uses the existing 30-day custom sessions and failed-login lockout. Keep `[functions.uno-site-api] verify_jwt = false` in `supabase/config.toml`.
 
-New API actions: `admin_users`, `admin_add_user`, `admin_user_active`, `admin_reset_pin`, `admin_rules`, `admin_save_rules`, `admin_games`, `admin_save_game`, `admin_delete_game`, `admin_bonus`, `admin_save_bonus`, `admin_delete_bonus`, `admin_settings`, `admin_save_settings`, and authenticated `change_pin`. Mutations return `{ "ok": true }`; validation errors return 400, missing records 404, and duplicates 409. Admin reads return their named arrays/objects. PIN fields are only sent in HTTPS request bodies and never persisted by the browser.
+New API actions: `member_settings`, `admin_users`, `admin_add_user`, `admin_user_active`, `admin_reset_pin`, `admin_rules`, `admin_save_rules`, `admin_games`, `admin_save_game`, `admin_delete_game`, `admin_bonus`, `admin_save_bonus`, `admin_delete_bonus`, `admin_settings`, `admin_save_settings`, and authenticated `change_pin`. Mutations return `{ "ok": true }`; validation errors return 400, missing records 404, and duplicates 409. Admin reads return their named arrays/objects. PIN fields are only sent in HTTPS request bodies and never persisted by the browser.
 
 Backend checks: `deno check supabase/functions/uno-site-api/index.ts` and `deno test --allow-read tests/admin_api_test.ts`. These offline handler tests cover every management action's 401/403 gates, validation, PIN hashing, session revocation, and safe responses. No real club records are changed by tests.
 
