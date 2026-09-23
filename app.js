@@ -6,7 +6,7 @@ const SESSION_KEY = "uno-club-site-session";
 const titles = { rules: "Uno Club Rules", schedule: "Games Schedule", bonus: "Bonus Hands Info", admin: "Admin" };
 const permanentSchedule = [
   { day: "Monday", games: ["Hold Em", "Omaha"] },
-  { day: "Wednesday", games: ["Tournament", "Omaha"] },
+  { day: "Wednesday", games: ["Omaha", "Tournament"] },
   { day: "Thursday", games: ["Hold Em", "Omaha"] },
 ];
 const $ = (id) => document.getElementById(id);
@@ -138,11 +138,7 @@ function renderPermanentSchedule(settings) {
 }
 function renderContent(page, data) {
   let items;
-  if (page === "schedule" && Array.isArray(data?.game_schedule)) items = data.game_schedule
-    .filter(game => game && game.is_active !== false)
-    .sort((a,b) => (a.day_sort ?? 0) - (b.day_sort ?? 0) || (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    .map(game => ({...game, name: game.game_name ?? game.name, day: game.day_name ?? game.day, time: game.start_time ?? game.time}));
-  else if (page === "rules" && Array.isArray(data?.rules)) {
+  if (page === "rules" && Array.isArray(data?.rules)) {
     items = data.rules.slice(0, 1).map((rule) => ({ title: titles.rules, body: rule?.body }));
   } else if (page === "bonus" && Array.isArray(data?.bonus_hands)) {
     items = data.bonus_hands.filter((hand) => hand && hand.is_active === true)

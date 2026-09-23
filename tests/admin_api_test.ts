@@ -79,7 +79,7 @@ Deno.test("disable and PIN reset revoke sessions; PIN changes validate current P
 Deno.test("management save/delete routes parameterize validated values", async () => {
   const cases: [string, Record<string, unknown>][] = [
     ["admin_save_rules",{body:"<synthetic>"}],
-    ["admin_save_game",{day_name:"Monday",day_sort:1,game_name:"Synthetic",start_time:"19:30",sort_order:2,is_active:true}],
+    ["admin_save_game",{day_name:"Monday",game_name:"Synthetic",start_time:"19:30",is_active:true}],
     ["admin_save_bonus",{hand_name:"Synthetic",payout_text:"",description:"",sort_order:1,is_active:false}],
     ["admin_delete_game",{id:targetId}], ["admin_delete_bonus",{id:targetId}],
     ["admin_save_settings",{reservation_phone_1:"",reservation_phone_2:"+15555550100"}],
@@ -89,12 +89,12 @@ Deno.test("management save/delete routes parameterize validated values", async (
     assert(queries.some(q => /INSERT|UPDATE|DELETE/.test(q.text) && !q.text.includes("FOR UPDATE")));
     assert(!queries.some(q => q.text.includes("<synthetic>") || q.text.includes("+15555550100")));
   }
-  reset(); assertEquals((await request("admin_save_game",{...cases[1][1],day_sort:1.5})).status,400);
+  reset(); assertEquals((await request("admin_save_game",{...cases[1][1],day_name:"Friday"})).status,400);
   reset(); assertEquals((await request("admin_save_settings",{reservation_phone_1:"javascript:bad",reservation_phone_2:""})).status,400);
   reset(); assertEquals((await request("admin_delete_bonus",{id:"bad"})).status,400);
 });
 Deno.test("health/CORS preserved; malformed body rejected without leaking details", async () => {
-  reset(); const res = await request("health",{},false); assertEquals((await res.json()).version,"0.4.0");
+  reset(); const res = await request("health",{},false); assertEquals((await res.json()).version,"0.5.0");
   assertEquals(res.headers.get("Access-Control-Allow-Origin"),"*");
   assertEquals((await handler(new Request("https://example.invalid",{method:"OPTIONS"}))).status,204);
   assertEquals((await handler(new Request("https://example.invalid",{method:"POST",body:"null"}))).status,400);

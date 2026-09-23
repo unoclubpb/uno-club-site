@@ -1,6 +1,6 @@
 # uno-club-site
 
-Independent Uno Club informational website, **v0.4.0**, using plain HTML, CSS, and JavaScript with no dependencies or build step. GitHub contains only the public site shell. Protected data and authentication live in Supabase behind the `uno-site-api` Edge Function. No other Uno Club repository or app is used.
+Independent Uno Club informational website, **v0.5.0**, using plain HTML, CSS, and JavaScript with no dependencies or build step. GitHub contains only the public site shell. Protected data and authentication live in Supabase behind the `uno-site-api` Edge Function. No other Uno Club repository or app is used.
 
 ## Preview and hosting
 
@@ -29,7 +29,7 @@ Bootstrap fields:
 - `bonus_hands`: active entries sorted by `sort_order`, displaying `hand_name`, `payout_text`, and `description`. IDs and timestamps are not rendered.
 - `settings`: optional `reservation_phone_1` and `reservation_phone_2`. The permanent member schedule uses these authenticated values as hidden recipients. Ten-digit US values and international values are accepted and normalized to SMS URI format in memory. Empty numbers leave reservation unavailable.
 
-The permanent member schedule is Monday (Hold Em, Omaha), Wednesday (Tournament, Omaha), and Thursday (Hold Em, Omaha). Each game has one `Reserve Seat` button addressed to both configured contacts.
+The permanent member schedule is Monday (Hold Em 7:00 PM, Omaha 7:00 PM), Wednesday (Omaha 7:00 PM, Tournament 7:30 PM), and Thursday (Hold Em 7:00 PM, Omaha 7:00 PM). Each game has one `Reserve Seat` button addressed to both configured contacts. The member schedule does not depend on `game_schedule`.
 
 No protected examples or fallback data belong in the shell.
 
@@ -57,7 +57,7 @@ Use HTTP `401` for invalid credentials or expired/revoked sessions, `403` for de
 
 Admin includes separate screens for Users, Rules, Games Schedule, Bonus Hands, Reservation Numbers, and Change My PIN. Users can be added, disabled, reactivated, and have their PIN reset; permanent deletion is not available. Administrators cannot disable themselves or bypass current-PIN verification on their own account. Every management request authenticates the active custom session and checks the current database admin flag. User lists explicitly omit PIN hashes. New PINs are hashed with pgcrypto bcrypt (cost 10). Disabling a user or resetting their PIN revokes their sessions. Changing your own PIN preserves the current session and revokes other sessions; incorrect current-PIN attempts use the existing lockout counters.
 
-Rules save to row 1 and open the refreshed member Rules page. Games and bonus hands support create/edit/delete (with confirmation), numeric ordering, and active flags. Reservation numbers accept international format or blank. Member content is fetched anew on navigation, so edits require no new login. Every authenticated member can reach Change My PIN from the main menu.
+Rules save to row 1 and open the refreshed member Rules page. Admin Games Schedule editing exposes only Day, Game Name, Start Time, and Active; the backend derives Monday/Wednesday/Thursday ordering and places Tournament after regular games. Bonus hands support create/edit/delete (with confirmation), numeric ordering, and active flags. Reservation numbers accept 10-digit US or international format. Member content is fetched anew on navigation, so edits require no new login. Every authenticated member can reach Change My PIN from the main menu.
 
 The existing case-insensitive unique index `site_users_username_unique` on `lower(username)` protects concurrent user creation. No schema changes are required. Authentication uses the existing 30-day custom sessions and failed-login lockout. Keep `[functions.uno-site-api] verify_jwt = false` in `supabase/config.toml`.
 

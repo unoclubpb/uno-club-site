@@ -2,12 +2,12 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
 [hidden] { display: none !important; }
-.site-header { background: #0B0B0B; color: white; padding: calc(18px + env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 18px max(22px, env(safe-area-inset-left)); }
-.header-inner { max-width: 680px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.brand { font-size: 27px; font-weight: 750; letter-spacing: -.8px; }
+.site-header { position: fixed; inset: 0 0 auto; z-index: 10; background: #0B0B0B; color: white; padding: calc(18px + env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 18px max(22px, env(safe-area-inset-left)); }
+.header-inner { max-width: 680px; margin: auto; display: flex; align-items: center; gap: 20px; }
+.brand { flex: 1; font-size: 31px; font-weight: 750; letter-spacing: -.8px; line-height: 1.1; text-align: center; }
 .header-logo { display: block; width: 120px; max-width: 40%; height: auto; object-fit: contain; flex-shrink: 0; }
-main { width: 100%; max-width: 724px; margin: 0 auto; padding: 20px max(22px, env(safe-area-inset-right)) 32px max(22px, env(safe-area-inset-left)); flex: 1; }
-.toolbar { display: flex; align-items: center; justify-content: space-between; min-height: 44px; gap: 12px; color: #626a78; font-size: 11px; letter-spacing: 1.4px; font-weight: 700; }
+main { width: 100%; max-width: 724px; margin: 0 auto; padding: calc(100px + env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 32px max(22px, env(safe-area-inset-left)); flex: 1; }
+.toolbar { display: flex; align-items: center; justify-content: flex-end; min-height: 0; gap: 12px; }
 .card { background: white; padding: 26px 22px; border: 1px solid #e5e7ec; border-radius: 18px; margin: 16px 0; box-shadow: 0 4px 20px #17234005; }
 h1 { font-size: clamp(28px, 6vw, 36px); letter-spacing: -1px; line-height: 1.15; margin: 10px 0 16px; }
 h2 { font-size: 20px; margin: 0 0 12px; }
@@ -38,7 +38,7 @@ footer { color: #626a78; text-align: center; font-size: 12px; padding: 22px 20px
 :focus-visible { outline: 3px solid #a36b00; outline-offset: 4px; }
 .skip-link { position: absolute; left: 12px; top: -80px; padding: 12px; background: white; color: #1E5ACB; z-index: 1; }
 .skip-link:focus { top: 12px; }
-@media (min-width: 600px) { main { padding-top: 32px; } .card { padding: 32px; } #login-view { max-width: 480px; margin: 24px auto; } }
+@media (min-width: 600px) { main { padding-top: calc(112px + env(safe-area-inset-top)); } .card { padding: 32px; } #login-view { max-width: 480px; margin: 24px auto; } }
 
 textarea, select { width: 100%; min-height: 52px; border: 1px solid #b9c0cb; border-radius: 9px; padding: 12px; font: inherit; font-size: 16px; background: white; color: #171b24; }
 textarea { resize: vertical; }

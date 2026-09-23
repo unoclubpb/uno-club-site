@@ -100,7 +100,7 @@ async function openAdmin(section) {
       $("content").append(card("Reservation contacts", "Use a 10-digit US number or international format. Leave blank to remove a contact."), adminForm("Reservation Numbers", [["reservation_phone_1","Phone number 1","tel",false],["reservation_phone_2","Phone number 2","tel",false]], data.settings, "Save numbers", (p,r) => saveAdmin(section,"admin_save_settings",p,r)));
     } else {
       const games = section === "games";
-      const fields = games ? [["day_name","Day"],["day_sort","Day order","number"],["game_name","Game name"],["start_time","Start time","time",false],["sort_order","Display order","number"],["is_active","Active?","boolean"]] : [["hand_name","Hand name"],["payout_text","Payout","text",false],["description","Description","textarea",false],["sort_order","Display order","number"],["is_active","Active?","boolean"]];
+      const fields = games ? [["day_name","Day"],["game_name","Game name"],["start_time","Start time","time",false],["is_active","Active?","boolean"]] : [["hand_name","Hand name"],["payout_text","Payout","text",false],["description","Description","textarea",false],["sort_order","Display order","number"],["is_active","Active?","boolean"]];
       const action = games ? "admin_save_game" : "admin_save_bonus";
       $("content").append(adminForm(games ? "Add game" : "Add bonus hand", fields, {}, "Add", (p,r) => saveAdmin(section,action,p,r)));
       for (const row of data[key]) {

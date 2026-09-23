@@ -12,7 +12,7 @@ const sql = postgres(DATABASE_URL, {
 });
 
 const FUNCTION_NAME = "uno-site-api";
-const VERSION = "0.4.0";
+const VERSION = "0.5.0";
 const SESSION_DAYS = 30;
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_MINUTES = 15;
@@ -250,6 +250,16 @@ function reservationSetting(value: unknown): string {
   }
   return value;
 }
+const scheduleDays: Record<string, number> = { monday: 1, wednesday: 2, thursday: 3 };
+function scheduleDay(value: unknown): { name: string; sort: number } {
+  const name = textValue(value, "day", 40);
+  const sort = scheduleDays[name.toLowerCase()];
+  if (!sort) throw new InputError("Day must be Monday, Wednesday, or Thursday.");
+  return { name, sort };
+}
+function scheduleOrder(gameName: string): number {
+  return gameName.trim().toLowerCase() === "tournament" ? 1 : 0;
+}
 const adminActions = new Set(["admin_users", "admin_add_user", "admin_user_active", "admin_reset_pin", "admin_rules", "admin_save_rules", "admin_games", "admin_save_game", "admin_delete_game", "admin_bonus", "admin_save_bonus", "admin_delete_bonus", "admin_settings", "admin_save_settings"]);
 
 async function memberSettings(req: Request): Promise<Response> {
@@ -342,20 +352,20 @@ async function management(req: Request, body: Record<string, unknown>): Promise<
       const bodyText = textValue(body.body, "rules", 100000, true);
       await tx`INSERT INTO public.site_rules (id, body) VALUES (1, ${bodyText}) ON CONFLICT (id) DO UPDATE SET body = EXCLUDED.body, updated_at = now()`;
     } else if (action === "admin_games") {
-      return json({ game_schedule: await tx`SELECT id, day_name, day_sort, game_name, start_time, sort_order, is_active FROM public.game_schedule ORDER BY day_sort, sort_order, start_time` });
+      return json({ game_schedule: await tx`SELECT id, day_name, day_sort, game_name, start_time, sort_order, is_active FROM public.game_schedule ORDER BY day_sort, CASE WHEN lower(game_name) = 'tournament' THEN 1 ELSE 0 END, start_time, lower(game_name)` });
     } else if (action === "admin_bonus") {
       return json({ bonus_hands: await tx`SELECT id, hand_name, payout_text, description, sort_order, is_active FROM public.bonus_hands ORDER BY sort_order` });
     } else if (action === "admin_save_game") {
-      const day = textValue(body.day_name, "day", 100);
+      const day = scheduleDay(body.day_name);
       const name = textValue(body.game_name, "game name", 200);
-      const daySort = integer(body.day_sort), sort = integer(body.sort_order), active = flag(body.is_active);
+      const sort = scheduleOrder(name), active = flag(body.is_active);
       const time = body.start_time === "" || body.start_time === null ? null : textValue(body.start_time, "start time", 8);
       if (time !== null && !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(time)) throw new InputError("Invalid start time.");
       if (body.id == null) {
-        await tx`INSERT INTO public.game_schedule (day_name, day_sort, game_name, start_time, sort_order, is_active) VALUES (${day}, ${daySort}, ${name}, ${time}, ${sort}, ${active})`;
+        await tx`INSERT INTO public.game_schedule (day_name, day_sort, game_name, start_time, sort_order, is_active) VALUES (${day.name}, ${day.sort}, ${name}, ${time}, ${sort}, ${active})`;
       } else {
         const id = uuid(body.id);
-        const rows = await tx`UPDATE public.game_schedule SET day_name=${day}, day_sort=${daySort}, game_name=${name}, start_time=${time}, sort_order=${sort}, is_active=${active}, updated_at=now() WHERE id=${id} RETURNING id`;
+        const rows = await tx`UPDATE public.game_schedule SET day_name=${day.name}, day_sort=${day.sort}, game_name=${name}, start_time=${time}, sort_order=${sort}, is_active=${active}, updated_at=now() WHERE id=${id} RETURNING id`;
         if (!rows.length) return json({ error: "Game not found. Refresh and try again." }, 404);
       }
     } else if (action === "admin_save_bonus") {
