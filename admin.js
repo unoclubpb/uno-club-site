@@ -6,7 +6,13 @@ function adminButton(label, fn, className = "button") {
   button.addEventListener("click", fn); return button;
 }
 function adminMenu() {
-  for (const [section, label] of Object.entries(adminSections)) $("content").append(adminButton(label, () => openAdmin(section), "button admin-menu-button"));
+  for (const [section, label] of Object.entries(adminSections)) {
+    if (section === "pin") continue;
+    $("content").append(adminButton(label, () => openAdmin(section), "button admin-menu-button"));
+  }
+  const pin = adminButton("Change My PIN", () => openAdmin("pin"), "button utility-button");
+  pin.id = "change-pin-button";
+  $("content").append(pin);
 }
 function adminForm(title, fields, values, submitLabel, onSubmit) {
   const form = document.createElement("form"); form.className = "card admin-form";

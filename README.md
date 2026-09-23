@@ -1,6 +1,6 @@
 # uno-club-site
 
-Independent Uno Club informational website, **v0.5.0**, using plain HTML, CSS, and JavaScript with no dependencies or build step. GitHub contains only the public site shell. Protected data and authentication live in Supabase behind the `uno-site-api` Edge Function. No other Uno Club repository or app is used.
+Independent Uno Club informational website, **v0.6.0**, using plain HTML, CSS, and JavaScript with no dependencies or build step. GitHub contains only the public site shell. Protected data and authentication live in Supabase behind the `uno-site-api` Edge Function. No other Uno Club repository or app is used.
 
 ## Preview and hosting
 

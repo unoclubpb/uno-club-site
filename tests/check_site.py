@@ -11,7 +11,11 @@ class Parser(HTMLParser):
  def handle_starttag(self, tag, attrs):
   a=dict(attrs)
   if 'id' in a: self.ids.append(a['id'])
-p=Parser(); p.feed((root/'index.html').read_text()); assert len(p.ids)==len(set(p.ids))
+html=(root/'index.html').read_text(); p=Parser(); p.feed(html); assert len(p.ids)==len(set(p.ids))
+assert 'Welcome to The Uno Club' not in html and 'Welcome to' in html
+assert 'MEMBER INFORMATION' not in html
+assert html.index('data-page="schedule"') < html.index('data-page="rules"') < html.index('data-page="bonus"') < html.index('data-page="admin"')
+css=(root/'styles.css').read_text(); assert 'position: fixed' in css and 'border: 2px solid #0B0B0B' in css and 'text-align: left' in css
 lib=ctypes.CDLL('/System/Library/Frameworks/JavaScriptCore.framework/JavaScriptCore')
 ptr=ctypes.c_void_p
 lib.JSGlobalContextCreate.argtypes=[ptr];lib.JSGlobalContextCreate.restype=ptr
@@ -50,11 +54,11 @@ var result="pending";
  await navigate("admin");assert(!elements["menu-view"].hidden,"admin gate");
  user.is_admin=true;await navigate("admin");assert(elements.content.children.length===6,"admin sections");
  renderContent("rules",{rules:[{body:"<img>"}]});
- assert(elements.content.children[0].children[0].children[1].textContent==="<img>","text only");
+ assert(elements.content.children[0].children[0].children[0].textContent==="<img>","text only");
  renderPermanentSchedule({reservation_phone_1:"7708615443",reservation_phone_2:"6788307590"});
  assert(elements.content.children.length===3,"permanent schedule days");
  assert(elements.content.children[0].children[0].textContent==="Monday","Monday heading");
- assert(elements.content.children[0].children[1].children[0].textContent==="Hold Em","Hold Em game");
+ assert(elements.content.children[0].children[1].children[0].textContent==="Hold Em — 7:00 PM","Hold Em game and time");
  assert(elements.content.children[0].children[1].children[1].textContent==="Reserve Seat","Reserve Seat label");
  const sms=elements.content.children[0].children[1].children[1].href;
  assert(sms.startsWith("sms:+17708615443,+16788307590&body="),"both SMS recipients");
@@ -89,7 +93,7 @@ var result="pending";
  assert(Object.keys(storage).length===1,"only session persisted");
  await navigate("rules");
  assert(calls[1].action==="bootstrap","bootstrap action");
- assert(elements.content.children[0].children[0].children[1].textContent==="<test-body>","rules array body");
+ assert(elements.content.children[0].children[0].children[0].textContent==="<test-body>","rules array body");
  renderContent("rules",{rules:[{body:"first"},{body:"second"}]});
  assert(elements.content.children[0].children.length===1,"only first rules row");
  renderContent("rules",{rules:[]});assert(elements.content.children[0].children.length===1,"empty rules");

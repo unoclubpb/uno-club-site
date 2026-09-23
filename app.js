@@ -5,9 +5,9 @@ const EDGE_FUNCTION_URL = "https://xnfudstmpejjmmwpqqgz.supabase.co/functions/v1
 const SESSION_KEY = "uno-club-site-session";
 const titles = { rules: "Uno Club Rules", schedule: "Games Schedule", bonus: "Bonus Hands Info", admin: "Admin" };
 const permanentSchedule = [
-  { day: "Monday", games: ["Hold Em", "Omaha"] },
-  { day: "Wednesday", games: ["Omaha", "Tournament"] },
-  { day: "Thursday", games: ["Hold Em", "Omaha"] },
+  { day: "Monday", games: [{ name: "Hold Em", time: "7:00 PM" }, { name: "Omaha", time: "7:00 PM" }] },
+  { day: "Wednesday", games: [{ name: "Omaha", time: "7:00 PM" }, { name: "Tournament", time: "7:30 PM" }] },
+  { day: "Thursday", games: [{ name: "Hold Em", time: "7:00 PM" }, { name: "Omaha", time: "7:00 PM" }] },
 ];
 const $ = (id) => document.getElementById(id);
 let token = "";
@@ -26,7 +26,6 @@ function show(view) {
   for (const name of ["login", "menu", "content"]) $(name + "-view").hidden = name !== view;
   $("logout").hidden = !user;
   $("admin-button").hidden = user?.is_admin !== true;
-  $("change-pin-button").hidden = !user;
   $("menu-hint").hidden = !!user;
   $(view + "-title").focus();
 }
@@ -79,12 +78,15 @@ function validUser(value) {
 function card(title, body) {
   const element = document.createElement("article");
   element.className = "card";
-  const heading = document.createElement("h2");
-  heading.textContent = title;
   const text = document.createElement("p");
   text.className = "body-text";
   text.textContent = body;
-  element.append(heading, text);
+  if (title) {
+    const heading = document.createElement("h2");
+    heading.textContent = title;
+    element.append(heading);
+  }
+  element.append(text);
   return element;
 }
 function reservationPhone(value) {
@@ -112,12 +114,12 @@ function renderPermanentSchedule(settings) {
       const row = document.createElement("div");
       row.className = "schedule-game";
       const name = document.createElement("span");
-      name.textContent = game;
+      name.textContent = `${game.name} — ${game.time}`;
       row.append(name);
       if (recipients) {
         const link = document.createElement("a");
         link.className = "button reserve-button";
-        const body = `I would like to reserve a seat for ${game} on ${day}.`;
+        const body = `I would like to reserve a seat for ${game.name} on ${day}.`;
         const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
         link.href = `sms:${recipients}${ios ? "&" : "?"}body=${encodeURIComponent(body)}`;
         link.textContent = "Reserve Seat";
@@ -139,46 +141,20 @@ function renderPermanentSchedule(settings) {
 function renderContent(page, data) {
   let items;
   if (page === "rules" && Array.isArray(data?.rules)) {
-    items = data.rules.slice(0, 1).map((rule) => ({ title: titles.rules, body: rule?.body }));
+    items = data.rules.slice(0, 1).map((rule) => ({ title: "", body: rule?.body }));
   } else if (page === "bonus" && Array.isArray(data?.bonus_hands)) {
     items = data.bonus_hands.filter((hand) => hand && hand.is_active === true)
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map((hand) => ({
-        title: hand.hand_name,
+        title: hand.hand_name === titles.bonus ? "" : hand.hand_name,
         body: [hand.payout_text, hand.description].filter((value) => typeof value === "string" && value).join("\n"),
       }));
   }
   if (!Array.isArray(items)) throw new Error("The service returned an unexpected response. Please try again later.");
   const fragment = document.createDocumentFragment();
   for (const item of items) {
-    if (!item || (page === "schedule"
-      ? typeof item.name !== "string" || typeof item.day !== "string"
-      : typeof item.title !== "string" || typeof item.body !== "string")) throw new Error("The service returned incomplete information. Please try again later.");
-    const element = page === "schedule"
-      ? card(item.name, [item.day, item.time, item.details].filter((v) => typeof v === "string" && v).join("\n"))
-      : card(item.title, item.body);
-    if (page === "schedule") {
-      // Prefer a game-specific number; otherwise offer the configured contacts.
-      const phones = [...new Set([
-        item.reservation_phone || data.settings?.reservation_phone_1,
-        item.reservation_phone ? null : data.settings?.reservation_phone_2,
-      ].filter((phone) => typeof phone === "string" && /^\+[1-9][0-9]{6,14}$/.test(phone)))];
-      for (const [index, phone] of phones.entries()) {
-        const link = document.createElement("a");
-        link.className = "button";
-        const body = `I would like to reserve a seat for the ${item.name} game on ${item.day}.`;
-        const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-        link.href = `sms:${phone}${ios ? "&" : "?"}body=${encodeURIComponent(body)}`;
-        link.textContent = phones.length > 1 ? `Request a seat by SMS (${index + 1})` : "Request a seat by SMS";
-        element.append(link);
-      }
-      if (!phones.length) {
-        const hint = document.createElement("p");
-        hint.className = "hint";
-        hint.textContent = "SMS seat requests are not available for this game yet.";
-        element.append(hint);
-      }
-    }
+    if (!item || typeof item.title !== "string" || typeof item.body !== "string") throw new Error("The service returned incomplete information. Please try again later.");
+    const element = card(item.title, item.body);
     fragment.append(element);
   }
   if (!items.length) fragment.append(card("Nothing posted yet", "Please check back for updates."));
@@ -284,5 +260,4 @@ async function initialize() {
   } catch (error) { if (current === revision) clearSession(error.message); }
   finally { $("login-submit").disabled = false; }
 }
-$("change-pin-button").addEventListener("click", () => openAdmin("pin"));
 initialize();
