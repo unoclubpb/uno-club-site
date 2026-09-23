@@ -35,7 +35,7 @@ function reset(admin: boolean | null = true) {
 async function request(action: string, fields: Record<string, unknown> = {}, authenticated = true) {
   return await handler(new Request("https://example.invalid", { method: "POST", headers: { "Content-Type": "application/json", ...(authenticated ? { Authorization: "Bearer synthetic" } : {}) }, body: JSON.stringify({ action, ...fields }) }));
 }
-const actions = ["admin_users","admin_add_user","admin_user_active","admin_reset_pin","admin_rules","admin_save_rules","admin_games","admin_save_game","admin_delete_game","admin_bonus","admin_save_bonus","admin_delete_bonus","admin_settings","admin_save_settings"];
+const actions = ["admin_users","admin_add_user","admin_user_active","admin_reset_pin","admin_delete_user","admin_rules","admin_save_rules","admin_games","admin_save_game","admin_delete_game","admin_bonus","admin_save_bonus","admin_delete_bonus","admin_settings","admin_save_settings"];
 Deno.test("every management action rejects missing/expired/inactive sessions and non-admins before writes", async () => {
   for (const action of actions) {
     reset(); assertEquals((await request(action, {}, false)).status, 401); assertEquals(queries.length, 0);
@@ -45,7 +45,7 @@ Deno.test("every management action rejects missing/expired/inactive sessions and
   }
 });
 Deno.test("self-disable and self-reset forbidden; hash never selected in user list", async () => {
-  for (const action of ["admin_user_active", "admin_reset_pin"]) {
+  for (const action of ["admin_user_active", "admin_reset_pin", "admin_delete_user"]) {
     reset(); assertEquals((await request(action, { id: actorId, is_active: false, pin: "1234" })).status, 400);
     assertEquals(queries.length, 1);
   }
@@ -81,7 +81,7 @@ Deno.test("management save/delete routes parameterize validated values", async (
     ["admin_save_rules",{body:"<synthetic>"}],
     ["admin_save_game",{day_name:"Monday",game_name:"Synthetic",start_time:"19:30",is_active:true}],
     ["admin_save_bonus",{body:"Synthetic bonus text\nSecond paragraph"}],
-    ["admin_delete_game",{id:targetId}], ["admin_delete_bonus",{id:targetId}],
+    ["admin_delete_game",{id:targetId}], ["admin_delete_bonus",{id:targetId}], ["admin_delete_user",{id:targetId}],
     ["admin_save_settings",{reservation_phone_1:"",reservation_phone_2:"+15555550100"}],
   ];
   for (const [action,fields] of cases) {

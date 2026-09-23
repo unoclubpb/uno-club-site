@@ -63,6 +63,32 @@ async function adminDelete(section, action, id, label) {
   try { await saveAdmin(section, action, { id }, current); }
   catch (error) { if (current === revision) { if (error.status === 401) clearSession(error.message); else status(error.message); } }
 }
+function renderUserDetails(member, currentUserId) {
+  const own = member.id === currentUserId;
+  const current = ++revision;
+  status(); $("content").replaceChildren(); $("content-title").textContent = "User Details"; show("content");
+  $("content").append(adminButton("← Back to Users", () => openAdmin("users"), "text-button back"));
+  const details = "Display Name: " + member.display_name + "\nUsername: " + member.username + "\nAdmin: " + (member.is_admin ? "Yes" : "No") + "\nStatus: " + (member.is_active ? "Active" : "Disabled");
+  $("content").append(card("User details", details));
+  if (!own) {
+    $("content").append(adminForm("Reset PIN", [["pin", "New 4-digit PIN", "password"]], {}, "Reset PIN", (p, r) => saveAdmin("users", "admin_reset_pin", { ...p, id: member.id }, r)));
+    const toggle = adminButton(member.is_active ? "Disable User" : "Reactivate User", async () => {
+      if (member.is_active && !window.confirm("Disable " + member.display_name + "? Their sessions will end.")) return;
+      toggle.disabled = true;
+      try { await saveAdmin("users", "admin_user_active", { id: member.id, is_active: !member.is_active }, current); }
+      catch (error) { if (current === revision) { if (error.status === 401) clearSession(error.message); else status(error.message); } }
+      finally { toggle.disabled = false; }
+    });
+    const remove = adminButton("Delete User", async () => {
+      if (!window.confirm("Delete " + member.display_name + "? This permanently deletes the user and their sessions.")) return;
+      try { await saveAdmin("users", "admin_delete_user", { id: member.id }, current); }
+      catch (error) { if (current === revision) { if (error.status === 401) clearSession(error.message); else status(error.message); } }
+    });
+    $("content").append(toggle, remove);
+  } else {
+    $("content").append(card("Account protection", "You cannot disable or delete the currently signed-in administrator. Use Change My PIN from the main menu to update your own PIN."));
+  }
+}
 async function openAdmin(section) {
   if (!user || (section !== "pin" && user.is_admin !== true)) return;
   const current = ++revision; status(); $("content").replaceChildren();
@@ -81,21 +107,15 @@ async function openAdmin(section) {
     status();
     if (section === "users") {
       $("content").append(adminForm("Add user", [["username","Username"],["display_name","Display name"],["pin","4-digit PIN","password"],["is_admin","Administrator?","boolean"]], {is_admin:false}, "Add user", (p,r) => saveAdmin(section,"admin_add_user",p,r)));
-      for (const member of data.users) {
-        const own = member.id === data.current_user_id;
-        const item = card(member.username, `${member.display_name}\nAdministrator: ${member.is_admin ? "Yes" : "No"}\nActive: ${member.is_active ? "Yes" : "No"}\nCreated: ${new Date(member.created_at).toLocaleDateString()}`);
-        if (!own) {
-          const toggle = adminButton(member.is_active ? "Disable user" : "Reactivate user", async () => {
-            if (member.is_active && !window.confirm(`Disable ${member.username}? Their sessions will end.`)) return;
-            toggle.disabled = true;
-            try { await saveAdmin(section,"admin_user_active",{id:member.id,is_active:!member.is_active},current); }
-            catch(error) { if (current === revision) { if(error.status===401) clearSession(error.message); else status(error.message); } }
-            finally { toggle.disabled = false; }
-          });
-          item.append(toggle, adminForm("Reset PIN", [["pin","New 4-digit PIN","password"]], {}, "Reset PIN", (p,r) => saveAdmin(section,"admin_reset_pin",{...p,id:member.id},r)));
-        }
-        $("content").append(item);
+      const list = document.createElement("div"); list.className = "user-list";
+      const ordered = [...data.users].sort((a, b) => {
+        if ((a.id === data.current_user_id) !== (b.id === data.current_user_id)) return a.id === data.current_user_id ? -1 : 1;
+        return String(a.display_name).localeCompare(String(b.display_name), undefined, { sensitivity: "base" }) || String(a.username).localeCompare(String(b.username), undefined, { sensitivity: "base" });
+      });
+      for (const member of ordered) {
+        list.append(adminButton(member.display_name + (member.is_active ? "" : " — Disabled"), () => renderUserDetails(member, data.current_user_id), "button user-list-item"));
       }
+      $("content").append(list);
     } else if (section === "rules") {
       $("content").append(adminForm("Uno Club rules", [["body","Rules","textarea",false]], data.rules[0] || {}, "Save rules", (p,r) => saveAdmin(section,"admin_save_rules",p,r,"rules")));
     } else if (section === "bonus") {

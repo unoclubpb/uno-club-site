@@ -40,7 +40,7 @@ class Element {
 const elements={};
 const document={getElementById(id){return elements[id]||(elements[id]=new Element())},querySelectorAll(){return []},createElement(){return new Element()},createDocumentFragment(){return new Element()}};
 const storage={};const localStorage={getItem(k){return storage[k]},setItem(k,v){storage[k]=v},removeItem(k){delete storage[k]}};
-const window={addEventListener(){}};
+const window={addEventListener(){},confirm(){return true}};
 const navigator={userAgent:"iPhone",platform:"iPhone"};
 function assert(v,m){if(!v)throw Error(m)}
 '''
@@ -124,7 +124,7 @@ var result="pending";
  // Admin screen and response regressions, using synthetic records only.
  user={username:"test-member",is_admin:true};saveToken("synthetic-session");
  const adminCalls=[];
- const responses={admin_users:{users:[{id:"self",username:"test-member",display_name:"Member",is_admin:true,is_active:true,created_at:"2026-01-01"},{id:"other",username:"other",display_name:"Other",is_admin:false,is_active:true,created_at:"2026-01-01"}],current_user_id:"self"},admin_rules:{rules:[{id:1,body:"Current rules"}]},admin_bonus:{bonus_text:"Saved bonus text"}};
+ const responses={admin_users:{users:[{id:"other",username:"zebra",display_name:"Zebra",is_admin:false,is_active:false,created_at:"2026-01-01"},{id:"self",username:"paul",display_name:"Paul Brannon",is_admin:true,is_active:true,created_at:"2026-01-01"},{id:"alice",username:"alice",display_name:"Alice",is_admin:false,is_active:true,created_at:"2026-01-01"}],current_user_id:"self"},admin_rules:{rules:[{id:1,body:"Current rules"}]},admin_bonus:{bonus_text:"Saved bonus text"}};
  api=async(action,fields)=>{adminCalls.push({action,fields});return responses[action] || {ok:true}};
  await navigate("admin");
  assert(elements.content.children.length===3,"three Admin areas");
@@ -139,8 +139,27 @@ var result="pending";
  assert(elements.content.children[1].children[1].children[0].value==="Saved bonus text","bonus text editor");
  assert(elements.content.children[1].children.length===3,"one bonus text field and save");
  await openAdmin("users");
- const ownCard=elements.content.children[2];
- assert(ownCard.children.length===2,"no Change My PIN control inside Admin");
+ const userList=elements.content.children[2];
+ assert(userList.children.length===3,"all users remain listed");
+ assert(userList.children[0].textContent==="Paul Brannon"&&userList.children[1].textContent==="Alice"&&userList.children[2].textContent==="Zebra — Disabled","Paul first, others alphabetical, disabled visible");
+ await userList.children[1].handlers.click();
+ assert(elements["content-title"].textContent==="User Details"&&elements.content.children[0].textContent==="← Back to Users","user detail navigation");
+ assert(elements.content.children[1].children[1].textContent.includes("Display Name: Alice")&&elements.content.children[1].children[1].textContent.includes("Status: Active"),"user details fields");
+ const detailForm=elements.content.children[2];
+ detailForm.children[1].children[0].value="5678";
+ await detailForm.handlers.submit({preventDefault(){}});
+ assert(adminCalls.some(call=>call.action==="admin_reset_pin"),"reset PIN action");
+ await openAdmin("users");
+ await elements.content.children[2].children[1].handlers.click();
+ await elements.content.children[3].handlers.click();
+ assert(adminCalls.some(call=>call.action==="admin_user_active"),"disable/reactivate action");
+ await openAdmin("users");
+ await elements.content.children[2].children[1].handlers.click();
+ await elements.content.children[4].handlers.click();
+ assert(adminCalls.some(call=>call.action==="admin_delete_user"),"delete action after confirmation");
+ await openAdmin("users");
+ await elements.content.children[2].children[0].handlers.click();
+ assert(elements.content.children.length===3&&elements.content.children[2].children[1].textContent.includes("cannot disable or delete"),"administrator self protection");
  await openAdmin("pin");
  const pinForm=elements.content.children[1];
  pinForm.children[1].children[0].value="1234";
@@ -154,7 +173,7 @@ var result="pending";
  api=async()=>{const error=Error("Forbidden");error.status=403;throw error};
  await openAdmin("users");assert(elements.status.textContent==="Forbidden","admin denial shown");
  assert(elements.content.children.length===2,"denied screen contains back and retry only");
- result="PASS: permanent schedule, day-routed SMS recipients, simplified bonus text editor, Admin navigation, PIN placement, login, bootstrap, restore, rules, bonus hands, logout; guest/admin gates, duplicate-title removal, stale responses, session expiry";
+ result="PASS: permanent schedule, day-routed SMS recipients, user ordering/details/reset/disable/delete, simplified bonus text editor, Admin navigation, PIN placement, login, bootstrap, restore, rules, bonus hands, logout; guest/admin gates, duplicate-title removal, stale responses, session expiry";
 })().catch(e=>result="FAIL: "+e.message);
 '''
 evaluate(tests)

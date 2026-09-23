@@ -261,7 +261,7 @@ function scheduleDay(value: unknown): { name: string; sort: number } {
 function scheduleOrder(gameName: string): number {
   return gameName.trim().toLowerCase() === "tournament" ? 1 : 0;
 }
-const adminActions = new Set(["admin_users", "admin_add_user", "admin_user_active", "admin_reset_pin", "admin_rules", "admin_save_rules", "admin_games", "admin_save_game", "admin_delete_game", "admin_bonus", "admin_save_bonus", "admin_delete_bonus", "admin_settings", "admin_save_settings"]);
+const adminActions = new Set(["admin_users", "admin_add_user", "admin_user_active", "admin_reset_pin", "admin_delete_user", "admin_rules", "admin_save_rules", "admin_games", "admin_save_game", "admin_delete_game", "admin_bonus", "admin_save_bonus", "admin_delete_bonus", "admin_settings", "admin_save_settings"]);
 
 async function memberSettings(req: Request): Promise<Response> {
   const token = bearerToken(req);
@@ -303,7 +303,7 @@ async function management(req: Request, body: Record<string, unknown>): Promise<
     const action = body.action;
     if (action !== "change_pin" && actor.is_admin !== true) return json({ error: "Forbidden" }, 403);
     if (action === "admin_users") {
-      const users = await tx`SELECT id, username, display_name, is_admin, is_active, created_at FROM public.site_users ORDER BY lower(username)`;
+      const users = await tx`SELECT id, username, display_name, is_admin, is_active, created_at FROM public.site_users ORDER BY CASE WHEN id = ${actor.user_id} THEN 0 ELSE 1 END, lower(display_name), lower(username)`;
       return json({ users, current_user_id: actor.user_id });
     }
     if (action === "admin_add_user") {
@@ -317,12 +317,15 @@ async function management(req: Request, body: Record<string, unknown>): Promise<
       if (existing.length) return json({ error: "That username is already in use." }, 409);
       await tx`INSERT INTO public.site_users (username, display_name, pin_hash, is_admin, is_active)
         VALUES (${username}, ${displayName}, extensions.crypt(${pin}, extensions.gen_salt('bf', 10)), ${admin}, true)`;
-    } else if (action === "admin_user_active" || action === "admin_reset_pin") {
+    } else if (action === "admin_user_active" || action === "admin_reset_pin" || action === "admin_delete_user") {
       const id = uuid(body.id);
-      if (id === actor.user_id) throw new InputError(action === "admin_reset_pin" ? "Use Change My PIN for your own account." : "You cannot change your own account's active status.");
+      if (id === actor.user_id) throw new InputError(action === "admin_reset_pin" ? "Use Change My PIN for your own account." : "You cannot change or delete your own account.");
       const targets = await tx`SELECT id FROM public.site_users WHERE id = ${id} FOR UPDATE`;
       if (!targets.length) return json({ error: "User not found." }, 404);
-      if (action === "admin_user_active") {
+      if (action === "admin_delete_user") {
+        await tx`DELETE FROM public.site_sessions WHERE user_id = ${id}`;
+        await tx`DELETE FROM public.site_users WHERE id = ${id}`;
+      } else if (action === "admin_user_active") {
         const active = flag(body.is_active);
         await tx`UPDATE public.site_users SET is_active = ${active}, updated_at = now() WHERE id = ${id}`;
         if (!active) await tx`DELETE FROM public.site_sessions WHERE user_id = ${id}`;
