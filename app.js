@@ -137,7 +137,7 @@ function renderPermanentSchedule(settings) {
   }
   // Append sections directly so each day remains a distinct, accessible block.
   $("content").replaceChildren();
-  for (const section of fragment.children) $("content").append(section);
+  for (const section of Array.from(fragment.children)) $("content").append(section);
 }
 function renderContent(page, data) {
   let items;

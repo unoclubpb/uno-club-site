@@ -58,6 +58,8 @@ var result="pending";
  renderPermanentSchedule({reservation_phone_1:"7708615443",reservation_phone_2:"6788307590"});
  assert(elements.content.children.length===3,"permanent schedule days");
  assert(elements.content.children[0].children[0].textContent==="Monday","Monday heading");
+ assert(elements.content.children[1].children[0].textContent==="Wednesday","Wednesday heading");
+ assert(elements.content.children[2].children[0].textContent==="Thursday","Thursday heading");
  assert(elements.content.children[0].children[1].children[0].textContent==="Hold Em — 7:00 PM","Hold Em game and time");
  assert(elements.content.children[0].children[1].children[1].textContent==="Reserve Seat","Reserve Seat label");
  const sms=elements.content.children[0].children[1].children[1].href;
