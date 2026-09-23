@@ -90,20 +90,12 @@ function card(title, body) {
   element.append(text);
   return element;
 }
-function reservationPhone(value) {
-  if (typeof value !== "string") return "";
-  const digits = value.replace(/[^0-9]/g, "");
-  if (/^1[2-9][0-9]{9}$/.test(digits)) return `+${digits}`;
-  if (/^[2-9][0-9]{9}$/.test(digits)) return `+1${digits}`;
-  if (/^[1-9][0-9]{6,14}$/.test(digits)) return `+${digits}`;
-  return "";
-}
-function renderPermanentSchedule(settings) {
-  const phones = [...new Set([
-    reservationPhone(settings?.reservation_phone_1),
-    reservationPhone(settings?.reservation_phone_2),
-  ].filter(Boolean))];
-  const recipients = phones.join(",");
+const reservationRecipients = {
+  Monday: "+16788307590",
+  Wednesday: "+16788307590",
+  Thursday: "+17708615443",
+};
+function renderPermanentSchedule() {
   const fragment = document.createDocumentFragment();
   for (const { day, games } of permanentSchedule) {
     const section = document.createElement("section");
@@ -117,12 +109,13 @@ function renderPermanentSchedule(settings) {
       const name = document.createElement("span");
       name.textContent = `${game.name} — ${game.time}`;
       row.append(name);
-      if (recipients) {
+      const recipient = reservationRecipients[day];
+      if (recipient) {
         const link = document.createElement("a");
         link.className = "button reserve-button";
         const body = `I would like to reserve a seat for ${game.name} on ${day}.`;
         const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-        link.href = `sms:${recipients}${ios ? "&" : "?"}body=${encodeURIComponent(body)}`;
+        link.href = `sms:${recipient}${ios ? "&" : "?"}body=${encodeURIComponent(body)}`;
         link.textContent = "Reserve Seat";
         row.append(link);
       } else {
@@ -175,7 +168,7 @@ async function navigate(page) {
     try {
       const data = await api("member_settings");
       if (current !== revision) return;
-      renderPermanentSchedule(data?.settings);
+      renderPermanentSchedule();
       status();
     } catch (error) {
       if (current !== revision) return;

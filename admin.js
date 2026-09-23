@@ -1,5 +1,5 @@
 "use strict";
-const adminSections = { users: "Users", rules: "Rules", bonus: "Bonus Hands", settings: "Reservation Numbers", pin: "Change My PIN" };
+const adminSections = { users: "Users", rules: "Rules", bonus: "Bonus Hands", pin: "Change My PIN" };
 function adminButton(label, fn, className = "button") {
   const button = document.createElement("button");
   button.type = "button"; button.className = className; button.textContent = label;
@@ -29,7 +29,7 @@ function adminForm(title, fields, values, submitLabel, onSubmit) {
       if (type === "password") { input.inputMode = "numeric"; input.pattern = "[0-9]{4}"; input.minLength = 4; input.maxLength = 4; input.autocomplete = key === "current_pin" ? "current-password" : "new-password"; }
       else if (type === "number") { input.step = "1"; input.min = "-100000"; input.max = "100000"; }
       else if (type === "time") input.step = "1";
-      else input.maxLength = key === "username" ? 100 : key.startsWith("reservation_phone") ? 16 : key === "payout_text" ? 1000 : 200;
+      else input.maxLength = key === "username" ? 100 : key === "payout_text" ? 1000 : 200;
     }
     input.required = required;
     input.value = String(values[key] ?? (type === "boolean" ? true : type === "number" ? 0 : ""));
@@ -74,10 +74,10 @@ async function openAdmin(section) {
       return;
     }
     status("Loading…");
-    const data = await api({users:"admin_users",rules:"admin_rules",bonus:"admin_bonus",settings:"admin_settings"}[section]);
+    const data = await api({users:"admin_users",rules:"admin_rules",bonus:"admin_bonus"}[section]);
     if (current !== revision) return;
-    const key = {users:"users",rules:"rules",bonus:"bonus_text",settings:"settings"}[section];
-    if (section === "settings" ? !data?.settings || typeof data.settings !== "object" : section === "bonus" ? typeof data?.bonus_text !== "string" : !Array.isArray(data?.[key])) throw new Error("The service returned incomplete information.");
+    const key = {users:"users",rules:"rules",bonus:"bonus_text"}[section];
+    if (section === "bonus" ? typeof data?.bonus_text !== "string" : !Array.isArray(data?.[key])) throw new Error("The service returned incomplete information.");
     status();
     if (section === "users") {
       $("content").append(adminForm("Add user", [["username","Username"],["display_name","Display name"],["pin","4-digit PIN","password"],["is_admin","Administrator?","boolean"]], {is_admin:false}, "Add user", (p,r) => saveAdmin(section,"admin_add_user",p,r)));
@@ -98,8 +98,6 @@ async function openAdmin(section) {
       }
     } else if (section === "rules") {
       $("content").append(adminForm("Uno Club rules", [["body","Rules","textarea",false]], data.rules[0] || {}, "Save rules", (p,r) => saveAdmin(section,"admin_save_rules",p,r,"rules")));
-    } else if (section === "settings") {
-      $("content").append(card("Reservation contacts", "Use a 10-digit US number or international format. Leave blank to remove a contact."), adminForm("Reservation Numbers", [["reservation_phone_1","Phone number 1","tel",false],["reservation_phone_2","Phone number 2","tel",false]], data.settings, "Save numbers", (p,r) => saveAdmin(section,"admin_save_settings",p,r)));
     } else if (section === "bonus") {
       $("content").append(adminForm("Bonus Hands Info", [["body","Bonus Hands Info","textarea",false]], { body: data.bonus_text }, "Save", (p,r) => saveAdmin(section,"admin_save_bonus",p,r,"bonus")));
     }
