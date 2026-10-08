@@ -11,55 +11,123 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="favicon-192x192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=0.8.0">
-  <script src="app.js?v=0.8.0" defer></script>
-  <script src="admin.js?v=0.8.0" defer></script>
+  <link rel="stylesheet" href="styles.css?v=0.9.0">
+  <script src="app.js?v=0.9.0" defer></script>
+  <script src="admin.js?v=0.9.0" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
+
   <header class="site-header">
     <div class="header-inner">
       <span class="brand">Welcome to</span>
       <img class="header-logo" src="images/uno-logo.png" alt="Uno Club logo">
     </div>
   </header>
+
   <main id="main" tabindex="-1">
-    <div class="toolbar"><button id="logout" class="text-button" hidden>Log out</button></div>
+    <div class="toolbar">
+      <button id="logout" class="text-button" hidden>Log out</button>
+    </div>
+
     <p id="status" role="status" aria-live="polite"></p>
-    <section id="login-view" class="card" aria-labelledby="login-title">
-      <p class="eyebrow">WELCOME TO UNO CLUB</p>
+
+    <section id="login-view" class="card login-card" aria-labelledby="login-title">
+      <div class="section-kicker">UNO CLUB MEMBER ACCESS</div>
       <h1 id="login-title" tabindex="-1">Member login</h1>
       <p class="intro">Sign in to view club rules, upcoming games, and bonus hands.</p>
+
       <form id="login-form">
         <label for="username">Username</label>
         <input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="100" required>
+
         <label for="pin">4-digit PIN</label>
         <input id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="current-password" required aria-describedby="pin-hint">
+
         <p id="pin-hint" class="hint">Enter your four-digit member PIN.</p>
         <button id="login-submit" class="button" type="submit">Log in</button>
       </form>
+
       <button class="text-button back" data-page="menu">Back to Main Menu</button>
     </section>
+
     <section id="menu-view" hidden aria-labelledby="menu-title">
-      <p class="eyebrow">YOUR CLUB, AT A GLANCE</p>
-      <h1 id="menu-title" tabindex="-1">Main Menu</h1>
-      <p class="intro">Everything you need for your next game.</p>
+      <div class="menu-hero">
+        <div class="section-kicker">UNO CLUB</div>
+        <h1 id="menu-title" tabindex="-1">Main Menu</h1>
+        <p class="intro">Everything you need for your next game.</p>
+      </div>
+
       <nav class="menu" aria-label="Main menu">
-        <button class="button menu-button" data-page="schedule">Games Schedule <span aria-hidden="true">→</span></button>
-        <button class="button menu-button" data-page="rules">Uno Club Rules <span aria-hidden="true">→</span></button>
-        <button class="button menu-button" data-page="bonus">Bonus Hands Info <span aria-hidden="true">→</span></button>
-        <button id="admin-button" class="button menu-button" data-page="admin" hidden>Admin <span aria-hidden="true">→</span></button>
+        <button class="menu-card" data-page="schedule">
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M7 2v3M17 2v3M3.5 9h17M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm2 8h3v3H7v-3Zm7 0h3v3h-3v-3Z"/>
+            </svg>
+          </span>
+          <span class="menu-copy">
+            <span class="menu-title">Games Schedule</span>
+            <span class="menu-subtitle">Times and seat reservations</span>
+          </span>
+          <span class="menu-arrow" aria-hidden="true">›</span>
+        </button>
+
+        <button class="menu-card" data-page="rules">
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M7 3h10a2 2 0 0 1 2 2v14l-7-3-7 3V5a2 2 0 0 1 2-2Zm2 5h6M9 11h6"/>
+            </svg>
+          </span>
+          <span class="menu-copy">
+            <span class="menu-title">Uno Club Rules</span>
+            <span class="menu-subtitle">Club policies and procedures</span>
+          </span>
+          <span class="menu-arrow" aria-hidden="true">›</span>
+        </button>
+
+        <button class="menu-card" data-page="bonus">
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="m12 3 2.2 4.5 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L4.8 8.2l5-.7L12 3Z"/>
+            </svg>
+          </span>
+          <span class="menu-copy">
+            <span class="menu-title">Bonus Hands Info</span>
+            <span class="menu-subtitle">Bonus hand details and payouts</span>
+          </span>
+          <span class="menu-arrow" aria-hidden="true">›</span>
+        </button>
+
+        <button id="admin-button" class="menu-card admin-card" data-page="admin" hidden>
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8 4 2 1-2 3-2-.5a7 7 0 0 1-1.5 1.5l.5 2-3 2-1-2a7 7 0 0 1-2 0l-1 2-3-2 .5-2A7 7 0 0 1 6 15.5L4 16l-2-3 2-1a7 7 0 0 1 0-2L2 9l2-3 2 .5A7 7 0 0 1 7.5 5L7 3l3-2 1 2a7 7 0 0 1 2 0l1-2 3 2-.5 2A7 7 0 0 1 18 6.5l2-.5 2 3-2 1a7 7 0 0 1 0 2Z"/>
+            </svg>
+          </span>
+          <span class="menu-copy">
+            <span class="menu-title">Admin</span>
+            <span class="menu-subtitle">Manage club information</span>
+          </span>
+          <span class="menu-arrow" aria-hidden="true">›</span>
+        </button>
       </nav>
-      <button id="change-pin-button" class="button utility-button" hidden>Change My PIN</button>
+
+      <div class="menu-utility-row">
+        <button id="change-pin-button" class="utility-button" hidden>Change My PIN</button>
+      </div>
+
       <p id="menu-hint" class="hint">Member login is required to open these pages.</p>
     </section>
+
     <section id="content-view" hidden aria-labelledby="content-title">
       <button class="text-button back" data-page="menu">← Back to Main Menu</button>
       <h1 id="content-title" tabindex="-1"></h1>
       <div id="content"></div>
     </section>
+
     <noscript><p class="card">Enable JavaScript to log in and view member information.</p></noscript>
   </main>
-  <footer>Uno Club <span aria-hidden="true">·</span> <span>v0.8.0</span></footer>
+
+  <footer>Uno Club <span aria-hidden="true">·</span> <span>v0.9.0</span></footer>
 </body>
 </html>
