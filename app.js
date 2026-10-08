@@ -1,8 +1,10 @@
 "use strict";
 
-// Set to https://<project-ref>.supabase.co/functions/v1/uno-site-api.
-const EDGE_FUNCTION_URL = "https://xnfudstmpejjmmwpqqgz.supabase.co/functions/v1/uno-site-api";
+const EDGE_FUNCTION_URL =
+  "https://xnfudstmpejjmmwpqqgz.supabase.co/functions/v1/uno-site-api";
+
 const SESSION_KEY = "uno-club-site-session";
+
 const titles = {
   rules: "Uno Club Rules",
   schedule: "Games Schedule",
@@ -39,9 +41,28 @@ const $ = (id) => document.getElementById(id);
 let token = "";
 let user = null;
 let revision = 0;
+let headerBackAction = null;
 
 function status(message = "") {
   $("status").textContent = message;
+}
+
+function setHeader(title = "Welcome to", backAction = null) {
+  $("header-title").textContent = title;
+
+  headerBackAction =
+    typeof backAction === "function"
+      ? backAction
+      : null;
+
+  $("header-back").hidden = !headerBackAction;
+}
+
+function setPageMode(page = "") {
+  document.body.classList.toggle(
+    "schedule-static",
+    page === "schedule"
+  );
 }
 
 function saveToken(value) {
@@ -49,106 +70,188 @@ function saveToken(value) {
 
   try {
     if (value) {
-      localStorage.setItem(SESSION_KEY, value);
+      localStorage.setItem(
+        SESSION_KEY,
+        value
+      );
     } else {
-      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(
+        SESSION_KEY
+      );
     }
   } catch {}
 }
 
 function show(view) {
-  for (const name of ["login", "menu", "content"]) {
-    $(name + "-view").hidden = name !== view;
+  for (const name of [
+    "login",
+    "menu",
+    "content"
+  ]) {
+    $(name + "-view").hidden =
+      name !== view;
   }
 
   $("logout").hidden = !user;
-  $("admin-button").hidden = user?.is_admin !== true;
-  $("change-pin-button").hidden = !user;
-  $("menu-hint").hidden = !!user;
 
-  $(view + "-title").focus();
+  $("admin-button").hidden =
+    user?.is_admin !== true;
+
+  $("change-pin-button").hidden =
+    !user;
+
+  $("menu-hint").hidden =
+    !!user;
+
+  const focusTarget =
+    $(view + "-title");
+
+  if (focusTarget) {
+    focusTarget.focus();
+  }
 }
 
-function clearSession(message = "") {
-  revision++;
-  saveToken("");
-  user = null;
-
-  $("content").replaceChildren();
-  $("content-title").textContent = "";
-  $("login-form").reset();
-
+function showLogin(message = "") {
+  setPageMode();
+  setHeader("Welcome to");
   show("login");
   status(message);
 }
 
-async function api(action, fields = {}, session = token) {
+function clearSession(message = "") {
+  revision++;
+
+  saveToken("");
+
+  user = null;
+
+  $("content").replaceChildren();
+
+  $("content-title").textContent = "";
+
+  $("login-form").reset();
+
+  showLogin(message);
+}
+
+function goMainMenu() {
+  if (user) {
+    navigate("menu");
+  } else {
+    showLogin();
+  }
+}
+
+async function api(
+  action,
+  fields = {},
+  session = token
+) {
   if (!EDGE_FUNCTION_URL) {
     throw new Error(
       "Member login is not available yet. Please check back soon."
     );
   }
 
-  const url = new URL(EDGE_FUNCTION_URL);
+  const url =
+    new URL(
+      EDGE_FUNCTION_URL
+    );
 
   if (url.protocol !== "https:") {
-    throw new Error("The site connection is not configured correctly.");
+    throw new Error(
+      "The site connection is not configured correctly."
+    );
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const controller =
+    new AbortController();
+
+  const timeout =
+    setTimeout(
+      () => controller.abort(),
+      15000
+    );
 
   try {
-    const response = await fetch(url.href, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(session
-          ? {
-              Authorization: `Bearer ${session}`
-            }
-          : {})
-      },
-      body: JSON.stringify({
-        action,
-        ...fields
-      }),
-      cache: "no-store",
-      credentials: "omit",
-      redirect: "error",
-      signal: controller.signal
-    });
+    const response =
+      await fetch(
+        url.href,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            ...(session
+              ? {
+                  Authorization:
+                    `Bearer ${session}`
+                }
+              : {})
+          },
+
+          body: JSON.stringify({
+            action,
+            ...fields
+          }),
+
+          cache: "no-store",
+          credentials: "omit",
+          redirect: "error",
+          signal: controller.signal
+        }
+      );
 
     if (!response.ok) {
       let detail;
 
-      if ([400, 404, 409].includes(response.status)) {
+      if (
+        [400, 404, 409]
+          .includes(
+            response.status
+          )
+      ) {
         try {
-          const body = await response.json();
+          const body =
+            await response.json();
 
           if (
-            typeof body.error === "string" &&
+            typeof body.error ===
+              "string" &&
             body.error.length <= 300
           ) {
-            detail = body.error;
+            detail =
+              body.error;
           }
         } catch {}
       }
 
-      const error = new Error(
-        detail ||
-          (response.status === 401
-            ? action === "login"
-              ? "Username or PIN was not recognized."
-              : "Your session has expired. Please log in again."
-            : response.status === 403
-            ? "You do not have access to this information."
-            : response.status === 429
-            ? "Too many attempts. Please wait before trying again."
-            : "The service is unavailable. Please try again later.")
-      );
+      const error =
+        new Error(
+          detail ||
+            (
+              response.status === 401
 
-      error.status = response.status;
+                ? (
+                    action === "login"
+                      ? "Username or PIN was not recognized."
+                      : "Your session has expired. Please log in again."
+                  )
+
+                : response.status === 403
+                  ? "You do not have access to this information."
+
+                : response.status === 429
+                  ? "Too many attempts. Please wait before trying again."
+
+                : "The service is unavailable. Please try again later."
+            )
+        );
+
+      error.status =
+        response.status;
+
       throw error;
     }
 
@@ -178,24 +281,45 @@ async function api(action, fields = {}, session = token) {
 function validUser(value) {
   return (
     value &&
-    typeof value.username === "string" &&
-    typeof value.is_admin === "boolean"
+    typeof value.username ===
+      "string" &&
+    typeof value.is_admin ===
+      "boolean"
   );
 }
 
 function card(title, body) {
-  const element = document.createElement("article");
+  const element =
+    document.createElement(
+      "article"
+    );
+
   element.className = "card";
 
-  const text = document.createElement("p");
-  text.className = "body-text";
-  text.textContent = body;
-
   if (title) {
-    const heading = document.createElement("h2");
-    heading.textContent = title;
-    element.append(heading);
+    const heading =
+      document.createElement(
+        "h2"
+      );
+
+    heading.textContent =
+      title;
+
+    element.append(
+      heading
+    );
   }
+
+  const text =
+    document.createElement(
+      "p"
+    );
+
+  text.className =
+    "body-text";
+
+  text.textContent =
+    body;
 
   element.append(text);
 
@@ -209,61 +333,134 @@ const reservationRecipients = {
 };
 
 function renderPermanentSchedule() {
-  const fragment = document.createDocumentFragment();
+  const fragment =
+    document.createDocumentFragment();
 
-  for (const { day, games } of permanentSchedule) {
-    const section = document.createElement("section");
-    section.className = "schedule-day";
+  for (
+    const {
+      day,
+      games
+    }
+    of permanentSchedule
+  ) {
+    const section =
+      document.createElement(
+        "section"
+      );
 
-    const heading = document.createElement("h2");
-    heading.textContent = day;
-    section.append(heading);
+    section.className =
+      "schedule-day";
 
-    for (const game of games) {
-      const row = document.createElement("div");
-      row.className = "schedule-game";
+    const heading =
+      document.createElement(
+        "h2"
+      );
 
-      const info = document.createElement("div");
-      info.className = "game-info";
+    heading.textContent =
+      day;
 
-      const gameName = document.createElement("span");
-      gameName.className = "game-name";
-      gameName.textContent = game.name;
+    section.append(
+      heading
+    );
 
-      const gameTime = document.createElement("span");
-      gameTime.className = "game-time";
-      gameTime.textContent = game.time;
+    for (
+      const game
+      of games
+    ) {
+      const row =
+        document.createElement(
+          "div"
+        );
 
-      info.append(gameName, gameTime);
+      row.className =
+        "schedule-game";
+
+      const info =
+        document.createElement(
+          "div"
+        );
+
+      info.className =
+        "game-info";
+
+      const gameName =
+        document.createElement(
+          "span"
+        );
+
+      gameName.className =
+        "game-name";
+
+      gameName.textContent =
+        game.name;
+
+      const gameTime =
+        document.createElement(
+          "span"
+        );
+
+      gameTime.className =
+        "game-time";
+
+      gameTime.textContent =
+        game.time;
+
+      info.append(
+        gameName,
+        gameTime
+      );
+
       row.append(info);
 
-      const recipient = reservationRecipients[day];
+      const recipient =
+        reservationRecipients[
+          day
+        ];
 
       if (recipient) {
-        const link = document.createElement("a");
-        link.className = "button reserve-button";
+        const link =
+          document.createElement(
+            "a"
+          );
+
+        link.className =
+          "button reserve-button";
 
         const body =
           `I would like to reserve a seat for ${game.name} on ${day}.`;
 
         const ios =
-          /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+          /iPad|iPhone|iPod/
+            .test(
+              navigator.userAgent
+            ) ||
           (
-            navigator.platform === "MacIntel" &&
-            navigator.maxTouchPoints > 1
+            navigator.platform ===
+              "MacIntel" &&
+            navigator.maxTouchPoints >
+              1
           );
 
         link.href =
-          `sms:${recipient}${ios ? "&" : "?"}` +
+          `sms:${recipient}` +
+          `${ios ? "&" : "?"}` +
           `body=${encodeURIComponent(body)}`;
 
-        link.textContent = "Reserve Seat";
+        link.textContent =
+          "Reserve Seat";
 
         row.append(link);
       } else {
-        const hint = document.createElement("span");
-        hint.className = "hint";
-        hint.textContent = "Reservation unavailable";
+        const hint =
+          document.createElement(
+            "span"
+          );
+
+        hint.className =
+          "hint";
+
+        hint.textContent =
+          "Reservation unavailable";
 
         row.append(hint);
       }
@@ -271,53 +468,73 @@ function renderPermanentSchedule() {
       section.append(row);
     }
 
-    fragment.append(section);
+    fragment.append(
+      section
+    );
   }
 
-  $("content").replaceChildren();
-
-  for (const section of Array.from(fragment.children)) {
-    $("content").append(section);
-  }
+  $("content")
+    .replaceChildren(
+      fragment
+    );
 }
 
-function renderContent(page, data) {
+function renderContent(
+  page,
+  data
+) {
   let items;
 
   if (
     page === "rules" &&
-    Array.isArray(data?.rules)
+    Array.isArray(
+      data?.rules
+    )
   ) {
-    items = data.rules
-      .slice(0, 1)
-      .map((rule) => ({
-        title: "",
-        body: rule?.body
-      }));
-  } else if (
-    page === "bonus" &&
-    Array.isArray(data?.bonus_hands)
-  ) {
-    const hand = data.bonus_hands.find(
-      (entry) =>
-        entry &&
-        entry.is_active !== false
-    );
-
-    items = hand
-      ? [
-          {
+    items =
+      data.rules
+        .slice(0, 1)
+        .map(
+          (rule) => ({
             title: "",
             body:
-              typeof hand.description === "string"
-                ? hand.description
-                : ""
-          }
-        ]
-      : [];
+              rule?.body
+          })
+        );
+
+  } else if (
+    page === "bonus" &&
+    Array.isArray(
+      data?.bonus_hands
+    )
+  ) {
+    const hand =
+      data.bonus_hands
+        .find(
+          (entry) =>
+            entry &&
+            entry.is_active !==
+              false
+        );
+
+    items =
+      hand
+        ? [
+            {
+              title: "",
+              body:
+                typeof hand.description ===
+                "string"
+                  ? hand.description
+                  : ""
+            }
+          ]
+        : [];
   }
 
-  if (!Array.isArray(items)) {
+  if (
+    !Array.isArray(items)
+  ) {
     throw new Error(
       "The service returned an unexpected response. Please try again later."
     );
@@ -326,11 +543,16 @@ function renderContent(page, data) {
   const fragment =
     document.createDocumentFragment();
 
-  for (const item of items) {
+  for (
+    const item
+    of items
+  ) {
     if (
       !item ||
-      typeof item.title !== "string" ||
-      typeof item.body !== "string"
+      typeof item.title !==
+        "string" ||
+      typeof item.body !==
+        "string"
     ) {
       throw new Error(
         "The service returned incomplete information. Please try again later."
@@ -338,7 +560,10 @@ function renderContent(page, data) {
     }
 
     fragment.append(
-      card(item.title, item.body)
+      card(
+        item.title,
+        item.body
+      )
     );
   }
 
@@ -351,22 +576,36 @@ function renderContent(page, data) {
     );
   }
 
-  $("content").replaceChildren(fragment);
+  $("content")
+    .replaceChildren(
+      fragment
+    );
 }
 
 async function navigate(page) {
-  const current = ++revision;
+  const current =
+    ++revision;
 
   status();
-  $("content").replaceChildren();
+
+  $("content")
+    .replaceChildren();
 
   if (page === "menu") {
+    setPageMode();
+
+    setHeader(
+      "Welcome to"
+    );
+
     show("menu");
+
     return;
   }
 
   if (!user) {
-    show("login");
+    showLogin();
+
     return;
   }
 
@@ -377,57 +616,40 @@ async function navigate(page) {
       user.is_admin !== true
     )
   ) {
+    setPageMode();
+
+    setHeader(
+      "Welcome to"
+    );
+
     show("menu");
+
     return;
   }
 
-  $("content-title").textContent =
-    titles[page];
+  setPageMode(page);
+
+  setHeader(
+    titles[page],
+    () => navigate("menu")
+  );
+
+  $("content-title")
+    .textContent =
+      titles[page];
 
   show("content");
 
   if (page === "admin") {
     adminMenu();
+
     return;
   }
 
-  if (page === "schedule") {
-    status("Loading…");
-
-    try {
-      await api("member_settings");
-
-      if (current !== revision) {
-        return;
-      }
-
-      renderPermanentSchedule();
-      status();
-    } catch (error) {
-      if (current !== revision) {
-        return;
-      }
-
-      if (error.status === 401) {
-        clearSession(error.message);
-        return;
-      }
-
-      status(error.message);
-
-      const retry =
-        document.createElement("button");
-
-      retry.className = "button";
-      retry.textContent = "Try again";
-
-      retry.addEventListener(
-        "click",
-        () => navigate(page)
-      );
-
-      $("content").append(retry);
-    }
+  if (
+    page === "schedule"
+  ) {
+    renderPermanentSchedule();
 
     return;
   }
@@ -435,230 +657,365 @@ async function navigate(page) {
   status("Loading…");
 
   try {
-    const data = await api("bootstrap");
+    const data =
+      await api(
+        "bootstrap"
+      );
 
-    if (current !== revision) {
+    if (
+      current !== revision
+    ) {
       return;
     }
 
-    if (!validUser(data?.user)) {
+    if (
+      !validUser(
+        data?.user
+      )
+    ) {
       throw new Error(
         "The service returned an incomplete user profile."
       );
     }
 
-    user = data.user;
+    user =
+      data.user;
 
     show("content");
-    renderContent(page, data);
+
+    renderContent(
+      page,
+      data
+    );
+
     status();
+
   } catch (error) {
-    if (current !== revision) {
+    if (
+      current !== revision
+    ) {
       return;
     }
 
-    if (error.status === 401) {
-      clearSession(error.message);
+    if (
+      error.status === 401
+    ) {
+      clearSession(
+        error.message
+      );
+
       return;
     }
 
-    status(error.message);
+    status(
+      error.message
+    );
 
     const retry =
-      document.createElement("button");
+      document.createElement(
+        "button"
+      );
 
-    retry.className = "button";
-    retry.textContent = "Try again";
+    retry.className =
+      "button";
+
+    retry.textContent =
+      "Try again";
 
     retry.addEventListener(
       "click",
       () => navigate(page)
     );
 
-    $("content").append(retry);
+    $("content")
+      .append(
+        retry
+      );
   }
 }
 
 document
-  .querySelectorAll("[data-page]")
-  .forEach((button) => {
-    button.addEventListener(
-      "click",
-      () => navigate(button.dataset.page)
-    );
-  });
-
-$("login-form").addEventListener(
-  "submit",
-  async (event) => {
-    event.preventDefault();
-
-    const username =
-      $("username").value.trim();
-
-    const pin =
-      $("pin").value;
-
-    if (
-      !username ||
-      !/^[0-9]{4}$/.test(pin)
-    ) {
-      status(
-        "Enter your username and a four-digit PIN."
+  .querySelectorAll(
+    "[data-page]"
+  )
+  .forEach(
+    (button) => {
+      button.addEventListener(
+        "click",
+        () =>
+          navigate(
+            button.dataset.page
+          )
       );
-
-      return;
     }
+  );
 
-    const current = ++revision;
+$("header-back")
+  .addEventListener(
+    "click",
+    () => {
+      if (
+        headerBackAction
+      ) {
+        headerBackAction();
+      }
+    }
+  );
 
-    $("login-submit").disabled = true;
+$("home-logo")
+  .addEventListener(
+    "click",
+    goMainMenu
+  );
 
-    status("Logging in…");
+$("login-form")
+  .addEventListener(
+    "submit",
+    async (event) => {
+      event.preventDefault();
 
-    try {
-      const data = await api(
-        "login",
-        {
-          username,
-          pin
-        },
-        ""
-      );
+      const username =
+        $("username")
+          .value
+          .trim();
 
-      if (current !== revision) {
+      const pin =
+        $("pin")
+          .value;
+
+      if (
+        !username ||
+        !/^[0-9]{4}$/
+          .test(pin)
+      ) {
+        status(
+          "Enter your username and a four-digit PIN."
+        );
+
         return;
       }
 
-      if (
-        typeof data?.session_token !== "string" ||
-        !data.session_token ||
-        !validUser(data)
-      ) {
-        throw new Error(
-          "The login response was incomplete. Please try again later."
-        );
-      }
+      const current =
+        ++revision;
 
-      saveToken(data.session_token);
+      $("login-submit")
+        .disabled =
+          true;
 
-      user = {
-        username: data.username,
-        display_name: data.display_name,
-        is_admin: data.is_admin
-      };
-
-      $("login-form").reset();
-
-      navigate("menu");
-    } catch (error) {
-      if (current === revision) {
-        status(error.message);
-      }
-    } finally {
-      $("pin").value = "";
-      $("login-submit").disabled = false;
-    }
-  }
-);
-
-$("logout").addEventListener(
-  "click",
-  async () => {
-    const previousToken = token;
-
-    clearSession("Logged out.");
-
-    const current = revision;
-
-    try {
-      await api(
-        "logout",
-        {},
-        previousToken
+      status(
+        "Logging in…"
       );
-    } catch {
-      if (current === revision) {
-        status(
-          "Logged out on this device. Server sign-out could not be confirmed."
+
+      try {
+        const data =
+          await api(
+            "login",
+            {
+              username,
+              pin
+            },
+            ""
+          );
+
+        if (
+          current !== revision
+        ) {
+          return;
+        }
+
+        if (
+          typeof data?.session_token !==
+            "string" ||
+          !data.session_token ||
+          !validUser(data)
+        ) {
+          throw new Error(
+            "The login response was incomplete. Please try again later."
+          );
+        }
+
+        saveToken(
+          data.session_token
         );
+
+        user = {
+          username:
+            data.username,
+
+          display_name:
+            data.display_name,
+
+          is_admin:
+            data.is_admin
+        };
+
+        $("login-form")
+          .reset();
+
+        navigate("menu");
+
+      } catch (error) {
+        if (
+          current === revision
+        ) {
+          status(
+            error.message
+          );
+        }
+      } finally {
+        $("pin")
+          .value =
+            "";
+
+        $("login-submit")
+          .disabled =
+            false;
       }
     }
-  }
-);
+  );
 
-window.addEventListener(
-  "storage",
-  (event) => {
-    if (
-      event.key === SESSION_KEY ||
-      event.key === null
-    ) {
+$("logout")
+  .addEventListener(
+    "click",
+    async () => {
+      const previousToken =
+        token;
+
       clearSession(
-        "Your session changed in another tab. Please log in again."
+        "Logged out."
       );
-    }
-  }
-);
 
-window.addEventListener(
-  "pageshow",
-  (event) => {
-    if (event.persisted) {
-      window.location.reload();
+      const current =
+        revision;
+
+      try {
+        await api(
+          "logout",
+          {},
+          previousToken
+        );
+      } catch {
+        if (
+          current === revision
+        ) {
+          status(
+            "Logged out on this device. Server sign-out could not be confirmed."
+          );
+        }
+      }
     }
-  }
-);
+  );
+
+window
+  .addEventListener(
+    "storage",
+    (event) => {
+      if (
+        event.key ===
+          SESSION_KEY ||
+        event.key === null
+      ) {
+        clearSession(
+          "Your session changed in another tab. Please log in again."
+        );
+      }
+    }
+  );
+
+window
+  .addEventListener(
+    "pageshow",
+    (event) => {
+      if (
+        event.persisted
+      ) {
+        window.location.reload();
+      }
+    }
+  );
 
 async function initialize() {
+  setHeader(
+    "Welcome to"
+  );
+
+  setPageMode();
+
   try {
     token =
-      localStorage.getItem(SESSION_KEY) ||
+      localStorage
+        .getItem(
+          SESSION_KEY
+        ) ||
       "";
   } catch {
     token = "";
   }
 
   if (!token) {
+    show("login");
+
     return;
   }
 
-  const current = ++revision;
+  const current =
+    ++revision;
 
-  $("login-submit").disabled = true;
+  $("login-submit")
+    .disabled =
+      true;
 
-  status("Checking your session…");
+  status(
+    "Checking your session…"
+  );
 
   try {
     const data =
-      await api("bootstrap");
+      await api(
+        "bootstrap"
+      );
 
-    if (current !== revision) {
+    if (
+      current !== revision
+    ) {
       return;
     }
 
-    if (!validUser(data?.user)) {
+    if (
+      !validUser(
+        data?.user
+      )
+    ) {
       throw new Error(
         "Please log in again."
       );
     }
 
-    user = data.user;
+    user =
+      data.user;
 
     navigate("menu");
+
   } catch (error) {
-    if (current === revision) {
-      clearSession(error.message);
+    if (
+      current === revision
+    ) {
+      clearSession(
+        error.message
+      );
     }
   } finally {
-    $("login-submit").disabled = false;
+    $("login-submit")
+      .disabled =
+        false;
   }
 }
 
 $("change-pin-button")
   .addEventListener(
     "click",
-    () => openAdmin("pin")
+    () =>
+      openAdmin("pin")
   );
 
 initialize();
