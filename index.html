@@ -11,25 +11,30 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="favicon-192x192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=0.9.0">
-  <script src="app.js?v=0.9.0" defer></script>
-  <script src="admin.js?v=0.9.0" defer></script>
+  <link rel="stylesheet" href="styles.css?v=0.10.0">
+  <script src="app.js?v=0.10.0" defer></script>
+  <script src="admin.js?v=0.10.0" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
   <header class="site-header">
     <div class="header-inner">
-      <span class="brand">Welcome to</span>
-      <img class="header-logo" src="images/uno-logo.png" alt="Uno Club logo">
+      <div class="header-copy">
+        <span id="header-title" class="brand">Welcome to</span>
+        <button id="header-back" class="header-back" type="button" aria-label="Go back one menu" hidden>←</button>
+      </div>
+
+      <div class="header-actions">
+        <button id="home-logo" class="logo-button" type="button" aria-label="Go to Main Menu">
+          <img class="header-logo" src="images/uno-logo.png" alt="Uno Club logo">
+        </button>
+        <button id="logout" class="header-logout" type="button" hidden>Log out</button>
+      </div>
     </div>
   </header>
 
   <main id="main" tabindex="-1">
-    <div class="toolbar">
-      <button id="logout" class="text-button" hidden>Log out</button>
-    </div>
-
     <p id="status" role="status" aria-live="polite"></p>
 
     <section id="login-view" class="card login-card" aria-labelledby="login-title">
@@ -47,16 +52,10 @@
         <p id="pin-hint" class="hint">Enter your four-digit member PIN.</p>
         <button id="login-submit" class="button" type="submit">Log in</button>
       </form>
-
-      <button class="text-button back" data-page="menu">Back to Main Menu</button>
     </section>
 
     <section id="menu-view" hidden aria-labelledby="menu-title">
-      <div class="menu-hero">
-        <div class="section-kicker">UNO CLUB</div>
-        <h1 id="menu-title" tabindex="-1">Main Menu</h1>
-        <p class="intro">Everything you need for your next game.</p>
-      </div>
+      <h1 id="menu-title" class="sr-only" tabindex="-1">Main Menu</h1>
 
       <nav class="menu" aria-label="Main menu">
         <button class="menu-card" data-page="schedule">
@@ -113,21 +112,20 @@
       </nav>
 
       <div class="menu-utility-row">
-        <button id="change-pin-button" class="utility-button" hidden>Change My PIN</button>
+        <button id="change-pin-button" class="utility-button" type="button" hidden>Change My PIN</button>
       </div>
 
       <p id="menu-hint" class="hint">Member login is required to open these pages.</p>
     </section>
 
     <section id="content-view" hidden aria-labelledby="content-title">
-      <button class="text-button back" data-page="menu">← Back to Main Menu</button>
-      <h1 id="content-title" tabindex="-1"></h1>
+      <h1 id="content-title" class="sr-only" tabindex="-1"></h1>
       <div id="content"></div>
     </section>
 
     <noscript><p class="card">Enable JavaScript to log in and view member information.</p></noscript>
   </main>
 
-  <footer>Uno Club <span aria-hidden="true">·</span> <span>v0.9.0</span></footer>
+  <footer>Uno Club <span aria-hidden="true">·</span> <span>v0.10.0</span></footer>
 </body>
 </html>
